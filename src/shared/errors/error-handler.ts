@@ -15,9 +15,9 @@ export function errorHandler(err: Error, c: Context): Response {
     return buildErrorResponse(c, err.status as ContentfulStatusCode, "UNKNOWN_ERROR", err.message, []);
   }
 
-  // Excepciones de dominio: 409 Conflict por defecto (puede sobrescribirse)
+  // Excepciones de dominio: usan el código de estado definido en la excepción
   if (err instanceof DomainException) {
-    return buildErrorResponse(c, 409 as ContentfulStatusCode, err.message, err.message, []);
+    return buildErrorResponse(c, err.statusCode as ContentfulStatusCode, err.code, err.message, []);
   }
 
   // Error inesperado: no exponer detalles internos

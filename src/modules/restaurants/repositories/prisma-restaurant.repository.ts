@@ -1,5 +1,6 @@
 import type { Restaurant } from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
+import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
   CreateRestaurantData,
   RestaurantRepository,
@@ -12,6 +13,7 @@ export class PrismaRestaurantRepository implements RestaurantRepository {
   }
 
   async findById(id: string): Promise<Restaurant | null> {
+    if (!isValidUuid(id)) return null;
     return prisma.restaurant.findUnique({ where: { id } });
   }
 

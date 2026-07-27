@@ -1,10 +1,19 @@
 /**
  * Excepción base para errores de dominio.
  * Cada módulo extiende esta clase en sus propios archivos de excepción.
+ *
+ * @param code    Código de error en inglés (ej. "RESTAURANT_NOT_FOUND")
+ * @param message Mensaje legible en español (ej. "El restaurante no existe")
+ * @param statusCode Código HTTP (por defecto 409)
  */
 export class DomainException extends Error {
-  constructor(message: string) {
+  readonly code: string;
+  readonly statusCode: number;
+
+  constructor(code: string, message: string, statusCode = 409) {
     super(message);
     this.name = "DomainException";
+    this.code = code;
+    this.statusCode = statusCode;
   }
 }
