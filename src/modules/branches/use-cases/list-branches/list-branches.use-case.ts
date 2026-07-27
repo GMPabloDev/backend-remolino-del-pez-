@@ -1,6 +1,9 @@
-import type { BranchWithRelations } from "../../repositories/branch.repository";
 import type { BranchStatus } from "../../../../generated/prisma/client";
+import type { BranchWithRelations } from "../../repositories/branch.repository";
 
 export interface ListBranchesUseCase {
-  execute(restaurantId: string, status?: BranchStatus): Promise<BranchWithRelations[]>;
+	execute(
+		restaurantId: string,
+		status?: BranchStatus,
+	): Promise<BranchWithRelations[]>;
 }

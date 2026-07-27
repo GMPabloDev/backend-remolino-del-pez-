@@ -7,13 +7,13 @@
  * @param statusCode Código HTTP (por defecto 409)
  */
 export class DomainException extends Error {
-  readonly code: string;
-  readonly statusCode: number;
+	readonly code: string;
+	readonly statusCode: number;
 
-  constructor(code: string, message: string, statusCode = 409) {
-    super(message);
-    this.name = "DomainException";
-    this.code = code;
-    this.statusCode = statusCode;
-  }
+	constructor(code: string, message: string, statusCode = 409) {
+		super(message);
+		this.name = "DomainException";
+		this.code = code;
+		this.statusCode = statusCode;
+	}
 }

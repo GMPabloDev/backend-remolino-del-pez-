@@ -1,13 +1,13 @@
 export interface ErrorDetail {
-  field: string;
-  code: string;
-  message: string;
+	field: string;
+	code: string;
+	message: string;
 }
 
 export interface ErrorResponseBody {
-  error: {
-    code: string;
-    message: string;
-    details: ErrorDetail[];
-  };
+	error: {
+		code: string;
+		message: string;
+		details: ErrorDetail[];
+	};
 }
