@@ -11,6 +11,14 @@ export interface BranchRepository {
   findByRestaurantId(restaurantId: string, status?: BranchStatus): Promise<BranchWithRelations[]>;
   update(id: string, data: UpdateBranchData): Promise<BranchWithRelations>;
   countByRestaurantAndCode(restaurantId: string, code: string): Promise<number>;
+  replaceIntervals(branchId: string, intervals: CreateIntervalData[]): Promise<BranchWithRelations>;
+  updateStatus(branchId: string, status: BranchStatus): Promise<BranchWithRelations>;
+}
+
+export interface CreateIntervalData {
+  dayOfWeek: number;
+  startMinute: number;
+  endMinute: number;
 }
 
 export interface CreateBranchData {

@@ -9,6 +9,8 @@ import { CreateBranchUseCaseImpl } from "./modules/branches/use-cases/create-bra
 import { ListBranchesUseCaseImpl } from "./modules/branches/use-cases/list-branches/list-branches.use-case.impl";
 import { GetBranchUseCaseImpl } from "./modules/branches/use-cases/get-branch/get-branch.use-case.impl";
 import { UpdateBranchUseCaseImpl } from "./modules/branches/use-cases/update-branch/update-branch.use-case.impl";
+import { ReplaceBranchScheduleUseCaseImpl } from "./modules/branches/use-cases/replace-branch-schedule/replace-branch-schedule.use-case.impl";
+import { UpdateBranchStatusUseCaseImpl } from "./modules/branches/use-cases/update-branch-status/update-branch-status.use-case.impl";
 import { createRestaurantRouter } from "./modules/restaurants/router";
 import { createBranchRouter } from "./modules/branches/router";
 
@@ -33,6 +35,8 @@ const createBranch = new CreateBranchUseCaseImpl(branchRepository, restaurantExi
 const listBranches = new ListBranchesUseCaseImpl(branchRepository, restaurantExists);
 const getBranch = new GetBranchUseCaseImpl(branchRepository);
 const updateBranch = new UpdateBranchUseCaseImpl(branchRepository);
+const replaceSchedule = new ReplaceBranchScheduleUseCaseImpl(branchRepository);
+const updateStatus = new UpdateBranchStatusUseCaseImpl(branchRepository);
 
 // --- Rutas ---
 app.route("/restaurants", createRestaurantRouter({
@@ -46,6 +50,8 @@ app.route("/restaurants/:restaurantId/branches", createBranchRouter({
   listBranches,
   getBranch,
   updateBranch,
+  replaceSchedule,
+  updateStatus,
 }));
 
 app.get("/", (c) => {

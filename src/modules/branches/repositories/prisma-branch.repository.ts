@@ -1,10 +1,11 @@
-import type { Branch, BranchRules, BranchStatus } from "../../../generated/prisma/client";
+import type { BranchStatus } from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
 import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
   BranchRepository,
   BranchWithRelations,
   CreateBranchData,
+  CreateIntervalData,
   UpdateBranchData,
 } from "./branch.repository";
 
@@ -63,6 +64,38 @@ export class PrismaBranchRepository implements BranchRepository {
   async countByRestaurantAndCode(restaurantId: string, code: string): Promise<number> {
     return prisma.branch.count({
       where: { restaurantId, code },
+    });
+  }
+
+  async replaceIntervals(
+    branchId: string,
+    intervals: CreateIntervalData[],
+  ): Promise<BranchWithRelations> {
+    // Reemplazo atómico: borrar todos y crear los nuevos en una transacción
+    return prisma.$transaction(async (tx) => {
+      await tx.branchScheduleInterval.deleteMany({ where: { branchId } });
+
+      if (intervals.length > 0) {
+        await tx.branchScheduleInterval.createMany({
+          data: intervals.map((i) => ({ branchId, ...i })),
+        });
+      }
+
+      return tx.branch.findUniqueOrThrow({
+        where: { id: branchId },
+        include: INCLUDE_RULES_AND_INTERVALS,
+      });
+    });
+  }
+
+  async updateStatus(
+    branchId: string,
+    status: BranchStatus,
+  ): Promise<BranchWithRelations> {
+    return prisma.branch.update({
+      where: { id: branchId },
+      data: { status },
+      include: INCLUDE_RULES_AND_INTERVALS,
     });
   }
 }
