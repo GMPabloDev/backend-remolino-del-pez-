@@ -213,20 +213,25 @@ function buildReservationOverlapWhere(
 	};
 }
 
-function isUniqueConstraintError(
-	error: unknown,
-): error is Prisma.PrismaClientKnownRequestError {
+function isUniqueConstraintError(error: unknown): boolean {
+	return hasPrismaCode(error, "P2002") || hasAdapterCode(error, "23505");
+}
+
+function isSerializationConflict(error: unknown): boolean {
+	return hasPrismaCode(error, "P2034") || hasAdapterCode(error, "40001");
+}
+
+function hasPrismaCode(error: unknown, code: string): boolean {
 	return (
-		error instanceof Prisma.PrismaClientKnownRequestError &&
-		error.code === "P2002"
+		error instanceof Prisma.PrismaClientKnownRequestError && error.code === code
 	);
 }
 
-function isSerializationConflict(
-	error: unknown,
-): error is Prisma.PrismaClientKnownRequestError {
-	return (
-		error instanceof Prisma.PrismaClientKnownRequestError &&
-		error.code === "P2034"
-	);
+function hasAdapterCode(error: unknown, code: string): boolean {
+	if (!isRecord(error) || !isRecord(error.cause)) return false;
+	return error.cause.originalCode === code;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
 }
