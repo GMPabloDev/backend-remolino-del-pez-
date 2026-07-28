@@ -1,6 +1,6 @@
 # SPEC 05 — Reservas temporales
 
-> **Status:** Draft
+> **Status:** Aprobado
 > **Depends on:** SPEC 01, SPEC 03, SPEC 04
 > **Date:** 2026-07-27
 > **Objective:** Implementar disponibilidad pública y reservas temporales de quince minutos con platos a precio congelado y asignación automática de una mesa.
