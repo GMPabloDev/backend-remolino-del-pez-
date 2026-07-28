@@ -9,7 +9,7 @@ import type {
 
 export class PrismaDishRepository implements DishRepository {
 	async create(data: CreateDishData) {
-		return prisma.dish.create({ data });
+		return prisma.dish.create({ data, include: { category: true } });
 	}
 
 	async findById(id: string) {

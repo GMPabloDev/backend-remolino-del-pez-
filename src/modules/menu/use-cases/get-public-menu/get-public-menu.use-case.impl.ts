@@ -59,7 +59,7 @@ export class GetPublicMenuUseCaseImpl implements GetPublicMenuUseCase {
 				ingredients: [],
 				allergens: [],
 				position: 0,
-				price: bd.price.toString(),
+				price: bd.price.toFixed(2),
 				status: toBranchDishStatus(bd.status) as "available" | "sold_out",
 			});
 		}

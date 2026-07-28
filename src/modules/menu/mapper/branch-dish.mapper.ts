@@ -20,7 +20,7 @@ export function toBranchDishConfigDto(
 	branchDish: BranchDish,
 ): BranchDishConfigDto {
 	return {
-		price: branchDish.price.toString(),
+		price: branchDish.price.toFixed(2),
 		status: toBranchDishStatus(branchDish.status),
 	};
 }
