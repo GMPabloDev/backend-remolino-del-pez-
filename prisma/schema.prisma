@@ -23,6 +23,11 @@ enum UserStatus {
   INACTIVE
 }
 
+enum DiningTableStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model Restaurant {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
@@ -54,6 +59,7 @@ model Branch {
   rules         BranchRules?
   intervals     BranchScheduleInterval[]
   assignedUsers User[]
+  tables        DiningTable[]
 
   @@unique([restaurantId, code])
   @@index([restaurantId, status])
@@ -115,4 +121,19 @@ model UserSession {
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
+}
+
+model DiningTable {
+  id        String            @id @default(uuid()) @db.Uuid
+  branchId  String            @db.Uuid
+  code      String            @db.VarChar(30)
+  capacity  Int
+  status    DiningTableStatus @default(INACTIVE)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  branch    Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@unique([branchId, code])
+  @@index([branchId, status])
+  @@index([branchId, status, capacity])
 }
