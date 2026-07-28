@@ -33,6 +33,10 @@ import { UpdateCategoryStatusUseCaseImpl } from "./modules/menu/use-cases/update
 import { UpdateDishUseCaseImpl } from "./modules/menu/use-cases/update-dish/update-dish.use-case.impl";
 import { UpdateDishStatusUseCaseImpl } from "./modules/menu/use-cases/update-dish-status/update-dish-status.use-case.impl";
 import { UpsertBranchDishUseCaseImpl } from "./modules/menu/use-cases/upsert-branch-dish/upsert-branch-dish.use-case.impl";
+import { PrismaReservationRepository } from "./modules/reservations/repositories/prisma-reservation.repository";
+import { createReservationRouter } from "./modules/reservations/router";
+import { CreateTemporaryReservationUseCaseImpl } from "./modules/reservations/use-cases/create-temporary-reservation/create-temporary-reservation.use-case.impl";
+import { GetAvailabilityUseCaseImpl } from "./modules/reservations/use-cases/get-availability/get-availability.use-case.impl";
 import { PrismaRestaurantRepository } from "./modules/restaurants/repositories/prisma-restaurant.repository";
 import { createRestaurantRouter } from "./modules/restaurants/router";
 import { CreateRestaurantUseCaseImpl } from "./modules/restaurants/use-cases/create-restaurant/create-restaurant.use-case.impl";
@@ -72,6 +76,7 @@ const diningTableRepository = new PrismaDiningTableRepository();
 const menuCategoryRepository = new PrismaMenuCategoryRepository();
 const dishRepository = new PrismaDishRepository();
 const branchDishRepository = new PrismaBranchDishRepository();
+const reservationRepository = new PrismaReservationRepository();
 const userRepository = new PrismaUserRepository();
 const authRepository = new PrismaAuthRepository();
 
@@ -221,6 +226,12 @@ const getPublicMenu = new GetPublicMenuUseCaseImpl(
 	branchIsActiveAndBelongsToRestaurant,
 );
 
+// --- Casos de uso: Reservas temporales ---
+const getAvailability = new GetAvailabilityUseCaseImpl(reservationRepository);
+const createTemporaryReservation = new CreateTemporaryReservationUseCaseImpl(
+	reservationRepository,
+);
+
 // --- Casos de uso: Autenticación ---
 const login = new LoginUseCaseImpl(
 	authRepository,
@@ -343,6 +354,14 @@ app.route(
 	"/public/restaurants/:restaurantId/branches/:branchId/menu",
 	createPublicMenuRouter({
 		getPublicMenu,
+	}),
+);
+
+app.route(
+	"/public/restaurants/:restaurantId/branches/:branchId/reservations",
+	createReservationRouter({
+		getAvailability,
+		createTemporaryReservation,
 	}),
 );
 
