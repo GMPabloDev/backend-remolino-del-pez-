@@ -28,7 +28,7 @@ export function errorHandler(err: Error, c: Context): Response {
 			err.statusCode as ContentfulStatusCode,
 			err.code,
 			err.message,
-			[],
+			err.details,
 		);
 	}
 
