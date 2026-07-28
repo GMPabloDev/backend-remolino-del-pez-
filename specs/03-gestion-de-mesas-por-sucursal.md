@@ -1,6 +1,6 @@
 # SPEC 03 — Gestión de mesas por sucursal
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 02
 > **Date:** 2026-07-27
 > **Objective:** Implementar la gestión autenticada de mesas por sucursal para registrar su capacidad y estado como base de la futura asignación automática de reservas.
