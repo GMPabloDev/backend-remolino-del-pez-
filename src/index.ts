@@ -7,6 +7,13 @@ import { LogoutUseCaseImpl } from "./modules/auth/use-cases/logout/logout.use-ca
 import { RefreshSessionUseCaseImpl } from "./modules/auth/use-cases/refresh-session/refresh-session.use-case.impl";
 import { PrismaBranchRepository } from "./modules/branches/repositories/prisma-branch.repository";
 import { createBranchRouter } from "./modules/branches/router";
+import { PrismaDiningTableRepository } from "./modules/tables/repositories/prisma-dining-table.repository";
+import { createDiningTableRouter } from "./modules/tables/router";
+import { CreateTableUseCaseImpl } from "./modules/tables/use-cases/create-table/create-table.use-case.impl";
+import { GetTableUseCaseImpl } from "./modules/tables/use-cases/get-table/get-table.use-case.impl";
+import { ListTablesUseCaseImpl } from "./modules/tables/use-cases/list-tables/list-tables.use-case.impl";
+import { UpdateTableUseCaseImpl } from "./modules/tables/use-cases/update-table/update-table.use-case.impl";
+import { UpdateTableStatusUseCaseImpl } from "./modules/tables/use-cases/update-table-status/update-table-status.use-case.impl";
 import { CreateBranchUseCaseImpl } from "./modules/branches/use-cases/create-branch/create-branch.use-case.impl";
 import { GetBranchUseCaseImpl } from "./modules/branches/use-cases/get-branch/get-branch.use-case.impl";
 import { ListBranchesUseCaseImpl } from "./modules/branches/use-cases/list-branches/list-branches.use-case.impl";
@@ -41,6 +48,7 @@ const tokenService = new JwtTokenService();
 // --- Repositorios ---
 const restaurantRepository = new PrismaRestaurantRepository();
 const branchRepository = new PrismaBranchRepository();
+const diningTableRepository = new PrismaDiningTableRepository();
 const userRepository = new PrismaUserRepository();
 const authRepository = new PrismaAuthRepository();
 
@@ -53,6 +61,14 @@ const restaurantExists = async (id: string): Promise<boolean> => {
 const branchExists = async (id: string): Promise<boolean> => {
 	const branch = await branchRepository.findById(id);
 	return branch !== null;
+};
+
+const branchBelongsToRestaurant = async (
+	branchId: string,
+	restaurantId: string,
+): Promise<boolean> => {
+	const branch = await branchRepository.findById(branchId);
+	return branch !== null && branch.restaurantId === restaurantId;
 };
 
 // --- Casos de uso: Restaurantes ---
@@ -87,6 +103,28 @@ const updateUserStatus = new UpdateUserStatusUseCaseImpl(userRepository);
 const resetUserPassword = new ResetUserPasswordUseCaseImpl(
 	userRepository,
 	passwordService,
+);
+
+// --- Casos de uso: Mesas ---
+const createTable = new CreateTableUseCaseImpl(
+	diningTableRepository,
+	branchBelongsToRestaurant,
+);
+const listTables = new ListTablesUseCaseImpl(
+	diningTableRepository,
+	branchBelongsToRestaurant,
+);
+const getTable = new GetTableUseCaseImpl(
+	diningTableRepository,
+	branchBelongsToRestaurant,
+);
+const updateTable = new UpdateTableUseCaseImpl(
+	diningTableRepository,
+	branchBelongsToRestaurant,
+);
+const updateTableStatus = new UpdateTableStatusUseCaseImpl(
+	diningTableRepository,
+	branchBelongsToRestaurant,
 );
 
 // --- Casos de uso: Autenticación ---
@@ -152,6 +190,19 @@ app.route(
 		updateBranch,
 		replaceSchedule,
 		updateStatus,
+		tokenService,
+		authRepository,
+	}),
+);
+
+app.route(
+	"/restaurants/:restaurantId/branches/:branchId/tables",
+	createDiningTableRouter({
+		createTable,
+		listTables,
+		getTable,
+		updateTable,
+		updateTableStatus,
 		tokenService,
 		authRepository,
 	}),

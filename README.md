@@ -51,9 +51,11 @@ Servidor en `http://localhost:3000`.
 
 | Rol | Restaurante | Sucursales | Usuarios |
 |-----|-------------|------------|----------|
-| `admin` | Crear, ver, editar | CRUD completo en todas | CRUD completo |
-| `manager` | Solo ver | CRUD completo en todas | Sin acceso |
-| `branch_admin` | Solo ver | Solo su sucursal asignada | Sin acceso |
+| Rol | Restaurante | Sucursales | Mesas | Usuarios |
+|-----|-------------|------------|-------|----------|
+| `admin` | Crear, ver, editar | CRUD completo en todas | CRUD completo en todas | CRUD completo |
+| `manager` | Solo ver | CRUD completo en todas | CRUD completo en todas | Sin acceso |
+| `branch_admin` | Solo ver | Solo su sucursal asignada | Solo su sucursal asignada | Sin acceso |
 
 ---
 
@@ -357,6 +359,83 @@ Reemplaza todos los intervalos atómicamente.
 
 ---
 
+## Mesas
+
+| Método | Ruta | Auth | Rol |
+|--------|------|------|-----|
+| `POST` | `/restaurants/:rid/branches/:bid/tables` | Sí | `admin`, `manager` |
+| `GET` | `/restaurants/:rid/branches/:bid/tables` | Sí | Todos (restringido) |
+| `GET` | `/restaurants/:rid/branches/:bid/tables/:tid` | Sí | Todos (restringido) |
+| `PATCH` | `/restaurants/:rid/branches/:bid/tables/:tid` | Sí | `admin`, `manager`, `branch_admin`* |
+| `PATCH` | `/restaurants/:rid/branches/:bid/tables/:tid/status` | Sí | `admin`, `manager`, `branch_admin`* |
+
+> \* `branch_admin` solo sobre las mesas de su sucursal asignada; otra sucursal → `403`.
+
+### POST /restaurants/:restaurantId/branches/:branchId/tables
+
+```json
+{
+  "code": "TERRAZA-02",
+  "capacity": 4
+}
+```
+
+- `code`: 1-30 caracteres, letras/números/guiones/guiones bajos. Se normaliza a mayúsculas.
+- `capacity`: entero positivo.
+- La mesa se crea con estado `inactive`.
+
+**Response 201:**
+```json
+{
+  "id": "uuid",
+  "branchId": "uuid",
+  "code": "TERRAZA-02",
+  "capacity": 4,
+  "status": "inactive",
+  "createdAt": "...",
+  "updatedAt": "..."
+}
+```
+
+**Errores:** `400`, `401`, `403`, `404 BRANCH_NOT_FOUND`, `409 TABLE_CODE_ALREADY_EXISTS`
+
+### GET /restaurants/:restaurantId/branches/:branchId/tables
+
+**Query params:** `?status=active` | `?status=inactive`
+
+**Response 200:** arreglo de mesas.
+
+### GET /restaurants/:restaurantId/branches/:branchId/tables/:tableId
+
+**Response 200:** mesa individual.
+
+**Errores:** `401`, `403`, `404 BRANCH_NOT_FOUND`, `404 TABLE_NOT_FOUND`
+
+### PATCH /restaurants/:restaurantId/branches/:branchId/tables/:tableId
+
+Todos los campos opcionales.
+
+```json
+{
+  "code": "NUEVO-01",
+  "capacity": 6
+}
+```
+
+- Si se cambia el código, se revalida formato y unicidad.
+
+**Errores:** `404 TABLE_NOT_FOUND`, `409 TABLE_CODE_ALREADY_EXISTS`
+
+### PATCH /restaurants/:restaurantId/branches/:branchId/tables/:tableId/status
+
+```json
+{ "status": "active" }
+```
+
+- Se permite activar mesas aunque la sucursal esté inactiva.
+
+---
+
 ## Formato de errores
 
 ```json
@@ -389,6 +468,8 @@ Reemplaza todos los intervalos atómicamente.
 | 409 | `BRANCH_CODE_ALREADY_EXISTS` | Código de sucursal duplicado |
 | 409 | `BRANCH_SCHEDULE_CONFLICT` | Horarios solapados |
 | 409 | `USER_EMAIL_ALREADY_EXISTS` | Email ya registrado |
+| 404 | `TABLE_NOT_FOUND` | Mesa no existe |
+| 409 | `TABLE_CODE_ALREADY_EXISTS` | Código de mesa duplicado |
 | 422 | `BRANCH_SCHEDULE_REQUIRED` | Activar sin horarios |
 | 422 | `LAST_ADMIN_REQUIRED` | No se puede eliminar al último admin |
 | 422 | `INVALID_ROLE_BRANCH` | Rol y sucursal incompatibles |
