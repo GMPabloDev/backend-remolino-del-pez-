@@ -574,6 +574,54 @@ Endpoint público, sin autenticación.
 - Sucursal activa sin platos: `200 { "categories": [] }`.
 - Sucursal inexistente, no relacionada o inactiva: `404 PUBLIC_MENU_NOT_FOUND`.
 
+## Reservas temporales públicas
+
+Las reservas temporales no requieren autenticación.
+
+### GET /public/restaurants/:restaurantId/branches/:branchId/reservations/availability
+
+Consulta horarios disponibles mediante `?date=YYYY-MM-DD&partySize=int`.
+
+```json
+{
+  "date": "2026-08-01",
+  "timezone": "America/Lima",
+  "durationMinutes": 60,
+  "availableTimes": ["12:00", "12:15", "12:30"]
+}
+```
+
+Usa bloques de 15 minutos, aplica horarios, anticipación y `maxPartySize`, y no revela mesas ni cantidades disponibles. Una fecha válida sin opciones devuelve `availableTimes: []`.
+
+### POST /public/restaurants/:restaurantId/branches/:branchId/reservations/temporary
+
+Crea un bloqueo de 15 minutos y asigna una única mesa activa con la menor capacidad suficiente. Requiere el header `Idempotency-Key: UUID`.
+
+```json
+{
+  "date": "2026-08-01",
+  "time": "13:30",
+  "partySize": 4,
+  "customer": {
+    "fullName": "Ana Torres",
+    "email": "ana@example.com",
+    "phone": "+51987654321"
+  },
+  "items": [{ "dishId": "uuid", "quantity": 2 }]
+}
+```
+
+- La hora usa únicamente minutos `00`, `15`, `30` o `45`.
+- Se exigen entre 1 y 50 platos distintos, con cantidades de 1 a 99.
+- Solo se aceptan platos activos y configurados como `available`.
+- Se congelan nombres y precios; el total es la suma de subtotales en `PEN`.
+- La reserva queda como `pending_payment` y las reservas vencidas dejan de bloquear mesas lógicamente.
+- La asignación y creación usan una transacción `Serializable`; no se combinan mesas.
+- `Reservation` conserva el cliente, intervalo, expiración, estado, total, clave idempotente y hash; `ReservationItem` congela nombre, precio, cantidad y subtotal.
+- La primera creación devuelve `201`; repetir la misma clave y payload devuelve `200` con la reserva original, incluso si venció.
+
+**Errores:** `400 VALIDATION_ERROR`, `404 PUBLIC_RESERVATION_NOT_FOUND`, `409 RESERVATION_TIME_UNAVAILABLE`, `409 DISH_NOT_AVAILABLE`, `409 IDEMPOTENCY_KEY_REUSED`.
+
 ---
 
 ## Formato de errores
@@ -612,9 +660,13 @@ Endpoint público, sin autenticación.
 | 404 | `MENU_CATEGORY_NOT_FOUND` | Categoría no existe |
 | 404 | `DISH_NOT_FOUND` | Plato no existe |
 | 404 | `PUBLIC_MENU_NOT_FOUND` | Menú público no disponible |
+| 404 | `PUBLIC_RESERVATION_NOT_FOUND` | Restaurante o sucursal no disponible para reservas |
 | 409 | `TABLE_CODE_ALREADY_EXISTS` | Código de mesa duplicado |
 | 409 | `MENU_CATEGORY_NAME_ALREADY_EXISTS` | Nombre de categoría duplicado |
 | 409 | `DISH_NAME_ALREADY_EXISTS` | Nombre de plato duplicado |
+| 409 | `RESERVATION_TIME_UNAVAILABLE` | Horario o mesa no disponible |
+| 409 | `DISH_NOT_AVAILABLE` | Plato no disponible en la sucursal |
+| 409 | `IDEMPOTENCY_KEY_REUSED` | Clave reutilizada con otra solicitud |
 | 422 | `BRANCH_SCHEDULE_REQUIRED` | Activar sin horarios |
 | 422 | `LAST_ADMIN_REQUIRED` | No se puede eliminar al último admin |
 | 422 | `INVALID_ROLE_BRANCH` | Rol y sucursal incompatibles |

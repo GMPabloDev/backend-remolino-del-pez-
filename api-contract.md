@@ -28,12 +28,16 @@
 | 404 | `MENU_CATEGORY_NOT_FOUND` | Categoría no existe |
 | 404 | `DISH_NOT_FOUND` | Plato no existe |
 | 404 | `PUBLIC_MENU_NOT_FOUND` | Menú público no disponible |
+| 404 | `PUBLIC_RESERVATION_NOT_FOUND` | Restaurante o sucursal no disponible para reservas |
 | 409 | `RESTAURANT_ALREADY_EXISTS` | Ya existe un restaurante |
 | 409 | `BRANCH_CODE_ALREADY_EXISTS` | Código de sucursal duplicado |
 | 409 | `BRANCH_SCHEDULE_CONFLICT` | Horarios solapados |
 | 409 | `TABLE_CODE_ALREADY_EXISTS` | Código de mesa duplicado |
 | 409 | `MENU_CATEGORY_NAME_ALREADY_EXISTS` | Nombre de categoría duplicado |
 | 409 | `DISH_NAME_ALREADY_EXISTS` | Nombre de plato duplicado |
+| 409 | `RESERVATION_TIME_UNAVAILABLE` | Horario o mesa no disponible |
+| 409 | `DISH_NOT_AVAILABLE` | Plato no disponible en la sucursal |
+| 409 | `IDEMPOTENCY_KEY_REUSED` | Clave reutilizada con otra solicitud |
 | 409 | `USER_EMAIL_ALREADY_EXISTS` | Email ya registrado |
 | 422 | `BRANCH_SCHEDULE_REQUIRED` | Activar sin horarios |
 | 422 | `LAST_ADMIN_REQUIRED` | Último admin activo |
@@ -688,3 +692,124 @@ Devuelve el menú publicable de una sucursal activa. Sin autenticación.
 - Categorías y platos se ordenan por `position` ascendente y `name` ascendente.
 
 **Errores:** `404 PUBLIC_MENU_NOT_FOUND` (restaurante o sucursal inexistente, no relacionados, o sucursal inactiva).
+
+## Reservas temporales públicas
+
+No requieren autenticación.
+
+### GET /public/restaurants/:restaurantId/branches/:branchId/reservations/availability
+
+Consulta horarios disponibles de una sucursal.
+
+**Query:**
+
+```text
+?date=YYYY-MM-DD&partySize=int
+```
+
+La respuesta usa `America/Lima`, bloques de 15 minutos y la duración configurada en la sucursal.
+
+**Response 200:**
+
+```json
+{
+  "date": "2026-08-01",
+  "timezone": "America/Lima",
+  "durationMinutes": 60,
+  "availableTimes": ["12:00", "12:15", "12:30"]
+}
+```
+
+No expone mesas ni cantidades disponibles. Una fecha válida sin opciones devuelve `availableTimes: []`.
+
+### POST /public/restaurants/:restaurantId/branches/:branchId/reservations/temporary
+
+Crea un bloqueo temporal de 15 minutos y asigna automáticamente una mesa activa con la menor capacidad suficiente. La mesa no se expone en la respuesta.
+
+**Header obligatorio:**
+
+```text
+Idempotency-Key: UUID
+```
+
+**Request:**
+
+```json
+{
+  "date": "2026-08-01",
+  "time": "13:30",
+  "partySize": 4,
+  "customer": {
+    "fullName": "Ana Torres",
+    "email": "ana@example.com",
+    "phone": "+51987654321"
+  },
+  "items": [
+    {
+      "dishId": "uuid",
+      "quantity": 2
+    }
+  ]
+}
+```
+
+Reglas:
+
+- `time` usa únicamente minutos `00`, `15`, `30` o `45`.
+- Se aplican anticipación mínima, máxima, horario de atención y `maxPartySize`.
+- Se exige entre 1 y 50 platos distintos.
+- Cada cantidad debe estar entre 1 y 99.
+- Solo se aceptan platos activos y configurados como `available`.
+- Los nombres y precios se congelan en la reserva.
+- El total es la suma de subtotales en `PEN`.
+- La reserva queda como `pending_payment`.
+- Expira lógicamente 15 minutos después de su creación.
+- Las reservas vencidas dejan de bloquear mesas sin necesidad de una tarea programada.
+- Las solicitudes concurrentes se procesan con aislamiento `Serializable`.
+- No se combinan mesas.
+
+**Persistencia:** `Reservation` conserva cliente, sucursal, mesa interna, intervalo, expiración, estado, moneda, total, clave idempotente y hash de solicitud. `ReservationItem` conserva el plato, nombre, precio unitario, cantidad y subtotal congelados. Las reservas temporales usan `PENDING_PAYMENT`; `CONFIRMED` queda reservado para pagos futuros.
+
+**Response 201:**
+
+```json
+{
+  "id": "uuid",
+  "branchId": "uuid",
+  "status": "pending_payment",
+  "date": "2026-08-01",
+  "startTime": "13:30",
+  "endTime": "14:30",
+  "timezone": "America/Lima",
+  "durationMinutes": 60,
+  "expiresAt": "ISO8601",
+  "partySize": 4,
+  "customer": {
+    "fullName": "Ana Torres",
+    "email": "ana@example.com",
+    "phone": "+51987654321"
+  },
+  "items": [
+    {
+      "dishId": "uuid",
+      "name": "Lomo saltado",
+      "unitPrice": "35.90",
+      "quantity": 2,
+      "subtotal": "71.80"
+    }
+  ],
+  "currency": "PEN",
+  "total": "71.80",
+  "createdAt": "ISO8601"
+}
+```
+
+Repetir la misma clave con el mismo payload devuelve `200` con la reserva original, incluso si ya venció. Reutilizarla con otro restaurante, sucursal o payload devuelve `409 IDEMPOTENCY_KEY_REUSED`.
+
+**Errores:**
+
+- `400 VALIDATION_ERROR`
+- `404 PUBLIC_RESERVATION_NOT_FOUND`
+- `409 RESERVATION_TIME_UNAVAILABLE`
+- `409 DISH_NOT_AVAILABLE`
+- `409 IDEMPOTENCY_KEY_REUSED`
