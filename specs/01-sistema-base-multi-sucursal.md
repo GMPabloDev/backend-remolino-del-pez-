@@ -1,6 +1,6 @@
 # SPEC 01 — Sistema base multi-sucursal
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** None
 > **Date:** 2026-07-27
 > **Objective:** Establecer la API y persistencia necesarias para administrar un único restaurante con múltiples sucursales, cada una con reglas de reserva y horarios semanales propios.

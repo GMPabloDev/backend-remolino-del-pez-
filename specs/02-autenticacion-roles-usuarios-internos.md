@@ -1,6 +1,6 @@
 # SPEC 02 — Autenticación, roles y usuarios internos
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01
 > **Date:** 2026-07-27
 > **Objective:** Implementar autenticación con sesiones revocables y control de acceso mediante roles fijos para que los usuarios internos administren únicamente el restaurante y las sucursales autorizadas.
