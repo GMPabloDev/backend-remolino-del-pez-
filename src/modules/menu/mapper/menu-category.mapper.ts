@@ -8,8 +8,7 @@ export function toMenuCategoryDto(category: MenuCategory): MenuCategoryDto {
 		restaurantId: category.restaurantId,
 		name: category.name,
 		position: category.position,
-		status:
-			category.status === "ACTIVE" ? "active" : "inactive",
+		status: category.status === "ACTIVE" ? "active" : "inactive",
 		createdAt: category.createdAt.toISOString(),
 		updatedAt: category.updatedAt.toISOString(),
 	};

@@ -1,3 +1,4 @@
+import type { DishStatus } from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
 import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
@@ -5,7 +6,6 @@ import type {
 	DishRepository,
 	UpdateDishData,
 } from "./dish.repository";
-import type { DishStatus } from "../../../generated/prisma/client";
 
 export class PrismaDishRepository implements DishRepository {
 	async create(data: CreateDishData) {

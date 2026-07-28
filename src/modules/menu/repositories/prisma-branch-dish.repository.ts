@@ -1,10 +1,13 @@
+import {
+	type BranchDishStatus,
+	Prisma,
+} from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
 import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
 	BranchDishRepository,
 	UpsertBranchDishData,
 } from "./branch-dish.repository";
-import { Prisma, BranchDishStatus } from "../../../generated/prisma/client";
 
 export class PrismaBranchDishRepository implements BranchDishRepository {
 	async findByBranchId(branchId: string) {

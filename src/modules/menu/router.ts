@@ -53,10 +53,7 @@ export function createCategoryRouter(deps: {
 		async (c) => {
 			const restaurantId = getRestaurantId(c);
 			const input = c.req.valid("json");
-			const category = await deps.createCategory.execute(
-				restaurantId,
-				input,
-			);
+			const category = await deps.createCategory.execute(restaurantId, input);
 			return c.json(category, 201);
 		},
 	);
@@ -70,7 +67,9 @@ export function createCategoryRouter(deps: {
 			const restaurantId = getRestaurantId(c);
 			const query = c.req.valid("query");
 			const status = query.status
-				? ((query.status.toUpperCase() as "ACTIVE" | "INACTIVE") as MenuCategoryStatus)
+				? (query.status.toUpperCase() as
+						| "ACTIVE"
+						| "INACTIVE" as MenuCategoryStatus)
 				: undefined;
 
 			const categories = await deps.listCategories.execute(
@@ -86,10 +85,7 @@ export function createCategoryRouter(deps: {
 		const restaurantId = getRestaurantId(c);
 		const categoryId = getCategoryId(c);
 
-		const category = await deps.getCategory.execute(
-			restaurantId,
-			categoryId,
-		);
+		const category = await deps.getCategory.execute(restaurantId, categoryId);
 		return c.json(category);
 	});
 

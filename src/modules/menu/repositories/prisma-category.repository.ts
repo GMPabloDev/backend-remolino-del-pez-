@@ -1,3 +1,4 @@
+import type { MenuCategoryStatus } from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
 import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
@@ -5,7 +6,6 @@ import type {
 	MenuCategoryRepository,
 	UpdateCategoryData,
 } from "./category.repository";
-import type { MenuCategoryStatus } from "../../../generated/prisma/client";
 
 export class PrismaMenuCategoryRepository implements MenuCategoryRepository {
 	async create(data: CreateCategoryData) {
@@ -18,10 +18,7 @@ export class PrismaMenuCategoryRepository implements MenuCategoryRepository {
 		return prisma.menuCategory.findUnique({ where: { id } });
 	}
 
-	async findByRestaurantId(
-		restaurantId: string,
-		status?: MenuCategoryStatus,
-	) {
+	async findByRestaurantId(restaurantId: string, status?: MenuCategoryStatus) {
 		if (!isValidUuid(restaurantId)) return [];
 
 		return prisma.menuCategory.findMany({

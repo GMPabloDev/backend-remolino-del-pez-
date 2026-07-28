@@ -11,10 +11,7 @@ export interface DiningTableRepository {
 		status?: DiningTableStatus,
 	): Promise<DiningTable[]>;
 	update(id: string, data: UpdateDiningTableData): Promise<DiningTable>;
-	updateStatus(
-		id: string,
-		status: DiningTableStatus,
-	): Promise<DiningTable>;
+	updateStatus(id: string, status: DiningTableStatus): Promise<DiningTable>;
 	countByBranchAndCode(branchId: string, code: string): Promise<number>;
 }
 

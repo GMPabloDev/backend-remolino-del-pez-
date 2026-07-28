@@ -61,7 +61,10 @@ function forbiddenResponse(c: {
  * BRANCH_ADMIN solo sobre la suya.
  */
 function authorizeBranchAccess(
-	c: { get: (key: string) => unknown; json: (body: unknown, status: number) => Response },
+	c: {
+		get: (key: string) => unknown;
+		json: (body: unknown, status: number) => Response;
+	},
 	branchId: string,
 ): boolean {
 	const auth = c.get("auth") as AuthContext | undefined;
@@ -122,7 +125,9 @@ export function createDiningTableRouter(deps: {
 
 			const query = c.req.valid("query");
 			const status = query.status
-				? ((query.status.toUpperCase() as "ACTIVE" | "INACTIVE") as DiningTableStatus)
+				? (query.status.toUpperCase() as
+						| "ACTIVE"
+						| "INACTIVE" as DiningTableStatus)
 				: undefined;
 
 			const tables = await deps.listTables.execute(
@@ -144,11 +149,7 @@ export function createDiningTableRouter(deps: {
 			return forbiddenResponse(c);
 		}
 
-		const table = await deps.getTable.execute(
-			restaurantId,
-			branchId,
-			tableId,
-		);
+		const table = await deps.getTable.execute(restaurantId, branchId, tableId);
 		return c.json(table);
 	});
 

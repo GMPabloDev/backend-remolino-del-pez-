@@ -19,8 +19,10 @@ export class CreateTableUseCaseImpl implements CreateTableUseCase {
 		branchId: string,
 		input: CreateDiningTableInput,
 	) {
-		const belongs =
-			await this.branchBelongsToRestaurant(branchId, restaurantId);
+		const belongs = await this.branchBelongsToRestaurant(
+			branchId,
+			restaurantId,
+		);
 		if (!belongs) {
 			throw new BranchNotFoundException();
 		}

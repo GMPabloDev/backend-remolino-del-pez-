@@ -8,8 +8,7 @@ export function toDiningTableDto(table: DiningTable): DiningTableDto {
 		branchId: table.branchId,
 		code: table.code,
 		capacity: table.capacity,
-		status:
-			table.status === "ACTIVE" ? "active" : "inactive",
+		status: table.status === "ACTIVE" ? "active" : "inactive",
 		createdAt: table.createdAt.toISOString(),
 		updatedAt: table.updatedAt.toISOString(),
 	};

@@ -1,3 +1,4 @@
+import type { DiningTableStatus } from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
 import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
@@ -5,7 +6,6 @@ import type {
 	DiningTableRepository,
 	UpdateDiningTableData,
 } from "./dining-table.repository";
-import type { DiningTableStatus } from "../../../generated/prisma/client";
 
 export class PrismaDiningTableRepository implements DiningTableRepository {
 	async create(data: CreateDiningTableData) {

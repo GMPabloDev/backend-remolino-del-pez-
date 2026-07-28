@@ -11,10 +11,7 @@ export interface MenuCategoryRepository {
 		status?: MenuCategoryStatus,
 	): Promise<MenuCategory[]>;
 	update(id: string, data: UpdateCategoryData): Promise<MenuCategory>;
-	updateStatus(
-		id: string,
-		status: MenuCategoryStatus,
-	): Promise<MenuCategory>;
+	updateStatus(id: string, status: MenuCategoryStatus): Promise<MenuCategory>;
 	countByRestaurantAndNormalizedName(
 		restaurantId: string,
 		normalizedName: string,

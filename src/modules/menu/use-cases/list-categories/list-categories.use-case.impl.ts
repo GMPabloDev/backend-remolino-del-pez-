@@ -1,7 +1,7 @@
+import type { MenuCategoryStatus } from "../../../../generated/prisma/client";
 import { RestaurantNotFoundException } from "../../../restaurants/exceptions/restaurant-not-found.exception";
 import { toMenuCategoryDto } from "../../mapper/menu-category.mapper";
 import type { MenuCategoryRepository } from "../../repositories/category.repository";
-import type { MenuCategoryStatus } from "../../../../generated/prisma/client";
 import type { ListCategoriesUseCase } from "./list-categories.use-case";
 
 export class ListCategoriesUseCaseImpl implements ListCategoriesUseCase {

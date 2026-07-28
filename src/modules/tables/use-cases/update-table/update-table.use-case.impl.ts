@@ -21,8 +21,10 @@ export class UpdateTableUseCaseImpl implements UpdateTableUseCase {
 		tableId: string,
 		input: UpdateDiningTableInput,
 	) {
-		const belongs =
-			await this.branchBelongsToRestaurant(branchId, restaurantId);
+		const belongs = await this.branchBelongsToRestaurant(
+			branchId,
+			restaurantId,
+		);
 		if (!belongs) {
 			throw new BranchNotFoundException();
 		}

@@ -14,8 +14,10 @@ export class GetTableUseCaseImpl implements GetTableUseCase {
 	) {}
 
 	async execute(restaurantId: string, branchId: string, tableId: string) {
-		const belongs =
-			await this.branchBelongsToRestaurant(branchId, restaurantId);
+		const belongs = await this.branchBelongsToRestaurant(
+			branchId,
+			restaurantId,
+		);
 		if (!belongs) {
 			throw new BranchNotFoundException();
 		}

@@ -18,16 +18,15 @@ export class ListTablesUseCaseImpl implements ListTablesUseCase {
 		branchId: string,
 		status?: DiningTableStatus,
 	) {
-		const belongs =
-			await this.branchBelongsToRestaurant(branchId, restaurantId);
+		const belongs = await this.branchBelongsToRestaurant(
+			branchId,
+			restaurantId,
+		);
 		if (!belongs) {
 			throw new BranchNotFoundException();
 		}
 
-		const tables = await this.tableRepository.findByBranchId(
-			branchId,
-			status,
-		);
+		const tables = await this.tableRepository.findByBranchId(branchId, status);
 
 		return tables.map(toDiningTableDto);
 	}
