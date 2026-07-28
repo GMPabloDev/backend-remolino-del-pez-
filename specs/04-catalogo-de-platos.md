@@ -1,6 +1,6 @@
 # SPEC 04 — Catálogo de platos
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 02
 > **Date:** 2026-07-27
 > **Objective:** Implementar un catálogo global de categorías y platos con precio y disponibilidad independientes por sucursal, incluyendo su administración autenticada y consulta pública.
