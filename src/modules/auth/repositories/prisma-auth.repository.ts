@@ -26,6 +26,10 @@ export class PrismaAuthRepository implements AuthRepository {
 		});
 	}
 
+	async findSessionById(id: string): Promise<UserSession | null> {
+		return prisma.userSession.findUnique({ where: { id } });
+	}
+
 	async createSession(data: CreateSessionData): Promise<UserSession> {
 		return prisma.userSession.create({ data });
 	}
