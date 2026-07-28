@@ -44,41 +44,47 @@ enum BranchDishStatus {
   INACTIVE
 }
 
+enum ReservationStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+}
+
 model Restaurant {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  legalName String
-  taxId     String   @unique @db.VarChar(11)
-  phone     String?
-  email     String?
-  timezone  String   @default("America/Lima")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String         @id @default(uuid()) @db.Uuid
+  name           String
+  legalName      String
+  taxId          String         @unique @db.VarChar(11)
+  phone          String?
+  email          String?
+  timezone       String         @default("America/Lima")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   branches       Branch[]
   menuCategories MenuCategory[]
   dishes         Dish[]
 }
 
 model Branch {
-  id           String                   @id @default(uuid()) @db.Uuid
-  restaurantId String                   @db.Uuid
-  name         String
-  code         String
-  address      String
-  district     String
-  province     String
-  department   String
-  phone        String
-  email        String?
-  status       BranchStatus             @default(INACTIVE)
-  createdAt    DateTime                 @default(now())
-  updatedAt    DateTime                 @updatedAt
-  restaurant   Restaurant               @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  id            String                   @id @default(uuid()) @db.Uuid
+  restaurantId  String                   @db.Uuid
+  name          String
+  code          String
+  address       String
+  district      String
+  province      String
+  department    String
+  phone         String
+  email         String?
+  status        BranchStatus             @default(INACTIVE)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  restaurant    Restaurant               @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
   rules         BranchRules?
   intervals     BranchScheduleInterval[]
   assignedUsers User[]
   tables        DiningTable[]
   dishes        BranchDish[]
+  reservations  Reservation[]
 
   @@unique([restaurantId, code])
   @@index([restaurantId, status])
@@ -143,14 +149,15 @@ model UserSession {
 }
 
 model DiningTable {
-  id        String            @id @default(uuid()) @db.Uuid
-  branchId  String            @db.Uuid
-  code      String            @db.VarChar(30)
-  capacity  Int
-  status    DiningTableStatus @default(INACTIVE)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  branch    Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  id           String            @id @default(uuid()) @db.Uuid
+  branchId     String            @db.Uuid
+  code         String            @db.VarChar(30)
+  capacity     Int
+  status       DiningTableStatus @default(INACTIVE)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  branch       Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  reservations Reservation[]
 
   @@unique([branchId, code])
   @@index([branchId, status])
@@ -174,22 +181,23 @@ model MenuCategory {
 }
 
 model Dish {
-  id             String     @id @default(uuid()) @db.Uuid
-  restaurantId   String     @db.Uuid
-  categoryId     String     @db.Uuid
-  name           String     @db.VarChar(120)
-  normalizedName String     @db.VarChar(120)
-  description    String     @db.VarChar(1000)
-  imageUrl       String?    @db.VarChar(2048)
-  ingredients    String[]   @default([])
-  allergens      String[]   @default([])
-  position       Int
-  status         DishStatus @default(INACTIVE)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  restaurant     Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
-  category       MenuCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  branches       BranchDish[]
+  id               String            @id @default(uuid()) @db.Uuid
+  restaurantId     String            @db.Uuid
+  categoryId       String            @db.Uuid
+  name             String            @db.VarChar(120)
+  normalizedName   String            @db.VarChar(120)
+  description      String            @db.VarChar(1000)
+  imageUrl         String?           @db.VarChar(2048)
+  ingredients      String[]          @default([])
+  allergens        String[]          @default([])
+  position         Int
+  status           DishStatus        @default(INACTIVE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  restaurant       Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Restrict)
+  category         MenuCategory      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  branches         BranchDish[]
+  reservationItems ReservationItem[]
 
   @@unique([restaurantId, normalizedName])
   @@index([restaurantId, status])
@@ -209,5 +217,48 @@ model BranchDish {
 
   @@unique([branchId, dishId])
   @@index([branchId, status])
+  @@index([dishId])
+}
+
+model Reservation {
+  id             String            @id @default(uuid()) @db.Uuid
+  branchId       String            @db.Uuid
+  tableId        String            @db.Uuid
+  idempotencyKey String            @unique @db.Uuid
+  requestHash    String            @db.VarChar(64)
+  status         ReservationStatus @default(PENDING_PAYMENT)
+  fullName       String            @db.VarChar(150)
+  email          String            @db.VarChar(320)
+  phone          String            @db.VarChar(16)
+  partySize      Int
+  startAt        DateTime          @db.Timestamptz(3)
+  endAt          DateTime          @db.Timestamptz(3)
+  expiresAt      DateTime          @db.Timestamptz(3)
+  currency       String            @db.Char(3)
+  total          Decimal           @db.Decimal(10, 2)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  branch         Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  table          DiningTable       @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  items          ReservationItem[]
+
+  @@index([branchId, status, startAt, endAt])
+  @@index([tableId, status, startAt, endAt])
+  @@index([status, expiresAt])
+}
+
+model ReservationItem {
+  id            String      @id @default(uuid()) @db.Uuid
+  reservationId String      @db.Uuid
+  dishId        String      @db.Uuid
+  dishName      String      @db.VarChar(120)
+  unitPrice     Decimal     @db.Decimal(10, 2)
+  quantity      Int
+  subtotal      Decimal     @db.Decimal(10, 2)
+  createdAt     DateTime    @default(now())
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  dish          Dish        @relation(fields: [dishId], references: [id], onDelete: Restrict)
+
+  @@unique([reservationId, dishId])
   @@index([dishId])
 }

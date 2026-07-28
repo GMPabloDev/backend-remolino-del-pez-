@@ -1,0 +1,232 @@
+import {
+	type DiningTable,
+	Prisma,
+	ReservationStatus,
+} from "../../../generated/prisma/client";
+import { prisma } from "../../../shared/database/prisma-client";
+import { isValidUuid } from "../../../shared/guards/uuid.guard";
+import type {
+	CreateTemporaryReservationData,
+	ReservableDish,
+	ReservationBranchContext,
+	ReservationRepository,
+	ReservationWithItems,
+	ReservationWriteResult,
+} from "./reservation.repository";
+
+const RESERVATION_INCLUDE = { items: true } as const;
+const SERIALIZABLE_RETRY_LIMIT = 3;
+
+export class PrismaReservationRepository implements ReservationRepository {
+	async findBranchContext(
+		restaurantId: string,
+		branchId: string,
+	): Promise<ReservationBranchContext | null> {
+		if (!isValidUuid(restaurantId) || !isValidUuid(branchId)) return null;
+
+		return prisma.branch.findFirst({
+			where: { id: branchId, restaurantId },
+			include: {
+				rules: true,
+				intervals: {
+					orderBy: [{ dayOfWeek: "asc" }, { startMinute: "asc" }],
+				},
+			},
+		});
+	}
+
+	async findByIdempotencyKey(
+		idempotencyKey: string,
+	): Promise<ReservationWithItems | null> {
+		if (!isValidUuid(idempotencyKey)) return null;
+
+		return prisma.reservation.findUnique({
+			where: { idempotencyKey },
+			include: RESERVATION_INCLUDE,
+		});
+	}
+
+	async findReservableDishes(
+		restaurantId: string,
+		branchId: string,
+		dishIds: string[],
+	): Promise<ReservableDish[]> {
+		if (
+			!isValidUuid(restaurantId) ||
+			!isValidUuid(branchId) ||
+			dishIds.length === 0
+		) {
+			return [];
+		}
+
+		const branchDishes = await prisma.branchDish.findMany({
+			where: {
+				branchId,
+				dishId: { in: dishIds },
+				status: "AVAILABLE",
+				branch: { restaurantId },
+				dish: {
+					restaurantId,
+					status: "ACTIVE",
+					category: { restaurantId, status: "ACTIVE" },
+				},
+			},
+			select: {
+				dishId: true,
+				price: true,
+				dish: { select: { name: true } },
+			},
+		});
+
+		return branchDishes.map((branchDish) => ({
+			dishId: branchDish.dishId,
+			name: branchDish.dish.name,
+			unitPrice: branchDish.price,
+		}));
+	}
+
+	async findAvailableTables(
+		branchId: string,
+		partySize: number,
+		startAt: Date,
+		endAt: Date,
+		now: Date,
+	): Promise<DiningTable[]> {
+		if (!isValidUuid(branchId)) return [];
+
+		return prisma.diningTable.findMany({
+			where: buildAvailableTableWhere(branchId, partySize, startAt, endAt, now),
+			orderBy: [{ capacity: "asc" }, { code: "asc" }, { id: "asc" }],
+		});
+	}
+
+	async createTemporary(
+		data: CreateTemporaryReservationData,
+		now: Date,
+	): Promise<ReservationWriteResult | null> {
+		for (let attempt = 1; attempt <= SERIALIZABLE_RETRY_LIMIT; attempt += 1) {
+			try {
+				return await prisma.$transaction(
+					async (tx) => {
+						const existing = await tx.reservation.findUnique({
+							where: { idempotencyKey: data.idempotencyKey },
+							include: RESERVATION_INCLUDE,
+						});
+
+						if (existing) {
+							return { reservation: existing, created: false };
+						}
+
+						const table = await tx.diningTable.findFirst({
+							where: buildAvailableTableWhere(
+								data.branchId,
+								data.partySize,
+								data.startAt,
+								data.endAt,
+								now,
+							),
+							orderBy: [{ capacity: "asc" }, { code: "asc" }, { id: "asc" }],
+						});
+
+						if (!table) return null;
+
+						const reservation = await tx.reservation.create({
+							data: {
+								branchId: data.branchId,
+								tableId: table.id,
+								idempotencyKey: data.idempotencyKey,
+								requestHash: data.requestHash,
+								fullName: data.fullName,
+								email: data.email,
+								phone: data.phone,
+								partySize: data.partySize,
+								startAt: data.startAt,
+								endAt: data.endAt,
+								expiresAt: data.expiresAt,
+								currency: data.currency,
+								total: data.total,
+								status: ReservationStatus.PENDING_PAYMENT,
+								items: { create: data.items },
+							},
+							include: RESERVATION_INCLUDE,
+						});
+
+						return { reservation, created: true };
+					},
+					{
+						isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+						maxWait: 5_000,
+						timeout: 10_000,
+					},
+				);
+			} catch (error) {
+				if (isUniqueConstraintError(error)) {
+					const existing = await this.findByIdempotencyKey(data.idempotencyKey);
+					if (existing) return { reservation: existing, created: false };
+				}
+
+				if (!isSerializationConflict(error)) throw error;
+				if (attempt === SERIALIZABLE_RETRY_LIMIT) throw error;
+			}
+		}
+
+		throw new Error("No se pudo completar la transacción de reserva");
+	}
+}
+
+function buildAvailableTableWhere(
+	branchId: string,
+	partySize: number,
+	startAt: Date,
+	endAt: Date,
+	now: Date,
+): Prisma.DiningTableWhereInput {
+	return {
+		branchId,
+		status: "ACTIVE",
+		capacity: { gte: partySize },
+		reservations: {
+			none: buildReservationOverlapWhere(startAt, endAt, now),
+		},
+	};
+}
+
+function buildReservationOverlapWhere(
+	startAt: Date,
+	endAt: Date,
+	now: Date,
+): Prisma.ReservationWhereInput {
+	return {
+		OR: [
+			{
+				status: ReservationStatus.CONFIRMED,
+				startAt: { lt: endAt },
+				endAt: { gt: startAt },
+			},
+			{
+				status: ReservationStatus.PENDING_PAYMENT,
+				expiresAt: { gt: now },
+				startAt: { lt: endAt },
+				endAt: { gt: startAt },
+			},
+		],
+	};
+}
+
+function isUniqueConstraintError(
+	error: unknown,
+): error is Prisma.PrismaClientKnownRequestError {
+	return (
+		error instanceof Prisma.PrismaClientKnownRequestError &&
+		error.code === "P2002"
+	);
+}
+
+function isSerializationConflict(
+	error: unknown,
+): error is Prisma.PrismaClientKnownRequestError {
+	return (
+		error instanceof Prisma.PrismaClientKnownRequestError &&
+		error.code === "P2034"
+	);
+}
