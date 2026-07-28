@@ -5,5 +5,6 @@ export interface ListBranchesUseCase {
 	execute(
 		restaurantId: string,
 		status?: BranchStatus,
+		assignedBranchId?: string,
 	): Promise<BranchWithRelations[]>;
 }

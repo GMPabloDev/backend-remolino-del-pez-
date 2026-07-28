@@ -15,12 +15,23 @@ export class ListBranchesUseCaseImpl implements ListBranchesUseCase {
 	async execute(
 		restaurantId: string,
 		status?: BranchStatus,
+		assignedBranchId?: string,
 	): Promise<BranchWithRelations[]> {
 		const exists = await this.restaurantExists(restaurantId);
 		if (!exists) {
 			throw new RestaurantNotFoundException();
 		}
 
-		return this.branchRepository.findByRestaurantId(restaurantId, status);
+		const branches = await this.branchRepository.findByRestaurantId(
+			restaurantId,
+			status,
+		);
+
+		// BRANCH_ADMIN solo ve su sucursal asignada
+		if (assignedBranchId) {
+			return branches.filter((b) => b.id === assignedBranchId);
+		}
+
+		return branches;
 	}
 }
