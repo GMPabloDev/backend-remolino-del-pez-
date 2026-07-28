@@ -13,6 +13,26 @@ import { ListBranchesUseCaseImpl } from "./modules/branches/use-cases/list-branc
 import { ReplaceBranchScheduleUseCaseImpl } from "./modules/branches/use-cases/replace-branch-schedule/replace-branch-schedule.use-case.impl";
 import { UpdateBranchUseCaseImpl } from "./modules/branches/use-cases/update-branch/update-branch.use-case.impl";
 import { UpdateBranchStatusUseCaseImpl } from "./modules/branches/use-cases/update-branch-status/update-branch-status.use-case.impl";
+import { createBranchDishRouter } from "./modules/menu/branch-dish.router";
+import { createCategoryRouter } from "./modules/menu/categories.router";
+import { createDishRouter } from "./modules/menu/dishes.router";
+import { createPublicMenuRouter } from "./modules/menu/public-menu.router";
+import { PrismaBranchDishRepository } from "./modules/menu/repositories/prisma-branch-dish.repository";
+import { PrismaMenuCategoryRepository } from "./modules/menu/repositories/prisma-category.repository";
+import { PrismaDishRepository } from "./modules/menu/repositories/prisma-dish.repository";
+import { CreateCategoryUseCaseImpl } from "./modules/menu/use-cases/create-category/create-category.use-case.impl";
+import { CreateDishUseCaseImpl } from "./modules/menu/use-cases/create-dish/create-dish.use-case.impl";
+import { GetCategoryUseCaseImpl } from "./modules/menu/use-cases/get-category/get-category.use-case.impl";
+import { GetDishUseCaseImpl } from "./modules/menu/use-cases/get-dish/get-dish.use-case.impl";
+import { GetPublicMenuUseCaseImpl } from "./modules/menu/use-cases/get-public-menu/get-public-menu.use-case.impl";
+import { ListBranchDishesUseCaseImpl } from "./modules/menu/use-cases/list-branch-dishes/list-branch-dishes.use-case.impl";
+import { ListCategoriesUseCaseImpl } from "./modules/menu/use-cases/list-categories/list-categories.use-case.impl";
+import { ListDishesUseCaseImpl } from "./modules/menu/use-cases/list-dishes/list-dishes.use-case.impl";
+import { UpdateCategoryUseCaseImpl } from "./modules/menu/use-cases/update-category/update-category.use-case.impl";
+import { UpdateCategoryStatusUseCaseImpl } from "./modules/menu/use-cases/update-category-status/update-category-status.use-case.impl";
+import { UpdateDishUseCaseImpl } from "./modules/menu/use-cases/update-dish/update-dish.use-case.impl";
+import { UpdateDishStatusUseCaseImpl } from "./modules/menu/use-cases/update-dish-status/update-dish-status.use-case.impl";
+import { UpsertBranchDishUseCaseImpl } from "./modules/menu/use-cases/upsert-branch-dish/upsert-branch-dish.use-case.impl";
 import { PrismaRestaurantRepository } from "./modules/restaurants/repositories/prisma-restaurant.repository";
 import { createRestaurantRouter } from "./modules/restaurants/router";
 import { CreateRestaurantUseCaseImpl } from "./modules/restaurants/use-cases/create-restaurant/create-restaurant.use-case.impl";
@@ -49,6 +69,9 @@ const tokenService = new JwtTokenService();
 const restaurantRepository = new PrismaRestaurantRepository();
 const branchRepository = new PrismaBranchRepository();
 const diningTableRepository = new PrismaDiningTableRepository();
+const menuCategoryRepository = new PrismaMenuCategoryRepository();
+const dishRepository = new PrismaDishRepository();
+const branchDishRepository = new PrismaBranchDishRepository();
 const userRepository = new PrismaUserRepository();
 const authRepository = new PrismaAuthRepository();
 
@@ -69,6 +92,18 @@ const branchBelongsToRestaurant = async (
 ): Promise<boolean> => {
 	const branch = await branchRepository.findById(branchId);
 	return branch !== null && branch.restaurantId === restaurantId;
+};
+
+const branchIsActiveAndBelongsToRestaurant = async (
+	branchId: string,
+	restaurantId: string,
+): Promise<boolean> => {
+	const branch = await branchRepository.findById(branchId);
+	return (
+		branch !== null &&
+		branch.restaurantId === restaurantId &&
+		branch.status === "ACTIVE"
+	);
 };
 
 // --- Casos de uso: Restaurantes ---
@@ -125,6 +160,65 @@ const updateTable = new UpdateTableUseCaseImpl(
 const updateTableStatus = new UpdateTableStatusUseCaseImpl(
 	diningTableRepository,
 	branchBelongsToRestaurant,
+);
+
+// --- Casos de uso: Catálogo - Categorías ---
+const createCategory = new CreateCategoryUseCaseImpl(
+	menuCategoryRepository,
+	restaurantExists,
+);
+const listCategories = new ListCategoriesUseCaseImpl(
+	menuCategoryRepository,
+	restaurantExists,
+);
+const getCategory = new GetCategoryUseCaseImpl(
+	menuCategoryRepository,
+	restaurantExists,
+);
+const updateCategory = new UpdateCategoryUseCaseImpl(
+	menuCategoryRepository,
+	restaurantExists,
+);
+const updateCategoryStatus = new UpdateCategoryStatusUseCaseImpl(
+	menuCategoryRepository,
+	restaurantExists,
+);
+
+// --- Casos de uso: Catálogo - Platos ---
+const createDish = new CreateDishUseCaseImpl(
+	dishRepository,
+	menuCategoryRepository,
+	restaurantExists,
+);
+const listDishes = new ListDishesUseCaseImpl(dishRepository, restaurantExists);
+const getDish = new GetDishUseCaseImpl(dishRepository, restaurantExists);
+const updateDish = new UpdateDishUseCaseImpl(
+	dishRepository,
+	menuCategoryRepository,
+	restaurantExists,
+);
+const updateDishStatus = new UpdateDishStatusUseCaseImpl(
+	dishRepository,
+	restaurantExists,
+);
+
+// --- Casos de uso: Catálogo - Configuración por sucursal ---
+const listBranchDishes = new ListBranchDishesUseCaseImpl(
+	dishRepository,
+	branchDishRepository,
+	branchBelongsToRestaurant,
+);
+const upsertBranchDish = new UpsertBranchDishUseCaseImpl(
+	branchDishRepository,
+	dishRepository,
+	branchBelongsToRestaurant,
+);
+
+// --- Casos de uso: Catálogo - Menú público ---
+const getPublicMenu = new GetPublicMenuUseCaseImpl(
+	dishRepository,
+	branchDishRepository,
+	branchIsActiveAndBelongsToRestaurant,
 );
 
 // --- Casos de uso: Autenticación ---
@@ -205,6 +299,50 @@ app.route(
 		updateTableStatus,
 		tokenService,
 		authRepository,
+	}),
+);
+
+// --- Rutas: Catálogo ---
+app.route(
+	"/restaurants/:restaurantId/menu/categories",
+	createCategoryRouter({
+		createCategory,
+		listCategories,
+		getCategory,
+		updateCategory,
+		updateCategoryStatus,
+		tokenService,
+		authRepository,
+	}),
+);
+
+app.route(
+	"/restaurants/:restaurantId/menu/dishes",
+	createDishRouter({
+		createDish,
+		listDishes,
+		getDish,
+		updateDish,
+		updateDishStatus,
+		tokenService,
+		authRepository,
+	}),
+);
+
+app.route(
+	"/restaurants/:restaurantId/branches/:branchId/dishes",
+	createBranchDishRouter({
+		listBranchDishes,
+		upsertBranchDish,
+		tokenService,
+		authRepository,
+	}),
+);
+
+app.route(
+	"/public/restaurants/:restaurantId/branches/:branchId/menu",
+	createPublicMenuRouter({
+		getPublicMenu,
 	}),
 );
 

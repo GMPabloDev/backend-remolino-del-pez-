@@ -51,11 +51,11 @@ Servidor en `http://localhost:3000`.
 
 | Rol | Restaurante | Sucursales | Usuarios |
 |-----|-------------|------------|----------|
-| Rol | Restaurante | Sucursales | Mesas | Usuarios |
-|-----|-------------|------------|-------|----------|
-| `admin` | Crear, ver, editar | CRUD completo en todas | CRUD completo en todas | CRUD completo |
-| `manager` | Solo ver | CRUD completo en todas | CRUD completo en todas | Sin acceso |
-| `branch_admin` | Solo ver | Solo su sucursal asignada | Solo su sucursal asignada | Sin acceso |
+| Rol | Restaurante | Sucursales | Mesas | Catálogo | Usuarios |
+|-----|-------------|------------|-------|----------|----------|
+| `admin` | Crear, ver, editar | CRUD completo en todas | CRUD completo en todas | CRUD completo global y por sucursal | CRUD completo |
+| `manager` | Solo ver | CRUD completo en todas | CRUD completo en todas | CRUD completo global y por sucursal | Sin acceso |
+| `branch_admin` | Solo ver | Solo su sucursal asignada | Solo su sucursal asignada | Solo lectura global; precio/estado en su sucursal | Sin acceso |
 
 ---
 
@@ -436,6 +436,146 @@ Todos los campos opcionales.
 
 ---
 
+## Catálogo de platos
+
+El catálogo es global por restaurante. Cada plato se configura por sucursal con precio y disponibilidad independientes.
+
+### Categorías
+
+| Método | Ruta | Auth | Rol |
+|--------|------|------|-----|
+| `POST` | `/restaurants/:rid/menu/categories` | Sí | `admin`, `manager` |
+| `GET` | `/restaurants/:rid/menu/categories` | Sí | Todos |
+| `GET` | `/restaurants/:rid/menu/categories/:cid` | Sí | Todos |
+| `PATCH` | `/restaurants/:rid/menu/categories/:cid` | Sí | `admin`, `manager` |
+| `PATCH` | `/restaurants/:rid/menu/categories/:cid/status` | Sí | `admin`, `manager` |
+
+### Platos
+
+| Método | Ruta | Auth | Rol |
+|--------|------|------|-----|
+| `POST` | `/restaurants/:rid/menu/dishes` | Sí | `admin`, `manager` |
+| `GET` | `/restaurants/:rid/menu/dishes` | Sí | Todos |
+| `GET` | `/restaurants/:rid/menu/dishes/:did` | Sí | Todos |
+| `PATCH` | `/restaurants/:rid/menu/dishes/:did` | Sí | `admin`, `manager` |
+| `PATCH` | `/restaurants/:rid/menu/dishes/:did/status` | Sí | `admin`, `manager` |
+
+### Configuración por sucursal
+
+| Método | Ruta | Auth | Rol |
+|--------|------|------|-----|
+| `GET` | `/restaurants/:rid/branches/:bid/dishes` | Sí | Todos (restringido) |
+| `PUT` | `/restaurants/:rid/branches/:bid/dishes/:did` | Sí | `admin`, `manager`, `branch_admin`* |
+
+> \* `branch_admin` solo sobre su sucursal asignada.
+
+### POST /restaurants/:restaurantId/menu/categories
+
+```json
+{
+  "name": "Fondos",
+  "position": 2
+}
+```
+
+- `name`: 1-80 caracteres, único por restaurante (case-insensitive).
+- `position`: entero positivo.
+- Creada con estado `inactive`.
+
+**Errores:** `409 MENU_CATEGORY_NAME_ALREADY_EXISTS`
+
+### GET /restaurants/:restaurantId/menu/categories
+
+**Query:** `?status=active|inactive`
+
+Ordenado por `position` ascendente, `name` ascendente.
+
+### POST /restaurants/:restaurantId/menu/dishes
+
+```json
+{
+  "name": "Lomo saltado",
+  "description": "Lomo de res con papas y arroz",
+  "imageUrl": "https://example.com/lomo.jpg",
+  "ingredients": ["Lomo de res", "Papa"],
+  "allergens": ["Soya"],
+  "categoryId": "uuid",
+  "position": 1
+}
+```
+
+- `imageUrl`: opcional, `null` o URL `http/https` ≤ 2048 caracteres.
+- Ingredientes (máx 50) y alérgenos (máx 30): se normalizan (recorte, sin vacíos, deduplicados case-insensitive).
+- Creado con estado `inactive`.
+
+**Errores:** `409 DISH_NAME_ALREADY_EXISTS`, `404 MENU_CATEGORY_NOT_FOUND`
+
+### PATCH /restaurants/:restaurantId/menu/dishes/:dishId
+
+Todos los campos opcionales. `imageUrl: null` elimina la referencia. Actualizar `ingredients` o `allergens` reemplaza la lista completa.
+
+### PUT /restaurants/:restaurantId/branches/:branchId/dishes/:dishId
+
+Configura precio y disponibilidad de un plato para una sucursal. Idempotente.
+
+```json
+{
+  "price": "35.90",
+  "status": "available"
+}
+```
+
+- `price`: cadena decimal dos posiciones, > `0.00`, ≤ `99999999.99`.
+- `status`: `available`, `sold_out` o `inactive`.
+- No requiere que categoría, plato o sucursal estén activos.
+
+**Response 200:** `{ "price": "35.90", "status": "available" }`
+
+### GET /restaurants/:restaurantId/branches/:branchId/dishes
+
+Lista todos los platos globales con su configuración local (`branchConfiguration`) o `null`.
+
+## Menú público
+
+### GET /public/restaurants/:restaurantId/branches/:branchId/menu
+
+Endpoint público, sin autenticación.
+
+```json
+{
+  "restaurantId": "uuid",
+  "branchId": "uuid",
+  "categories": [
+    {
+      "id": "uuid",
+      "name": "Fondos",
+      "position": 2,
+      "dishes": [
+        {
+          "id": "uuid",
+          "name": "Lomo saltado",
+          "description": "...",
+          "imageUrl": "...",
+          "ingredients": ["..."],
+          "allergens": ["..."],
+          "position": 1,
+          "price": "35.90",
+          "status": "available"
+        }
+      ]
+    }
+  ]
+}
+```
+
+- Solo categorías activas, platos activos y configuraciones `available`/`sold_out`.
+- Los platos `sold_out` aparecen pero marcados.
+- Categorías sin platos publicables se omiten.
+- Sucursal activa sin platos: `200 { "categories": [] }`.
+- Sucursal inexistente, no relacionada o inactiva: `404 PUBLIC_MENU_NOT_FOUND`.
+
+---
+
 ## Formato de errores
 
 ```json
@@ -469,7 +609,12 @@ Todos los campos opcionales.
 | 409 | `BRANCH_SCHEDULE_CONFLICT` | Horarios solapados |
 | 409 | `USER_EMAIL_ALREADY_EXISTS` | Email ya registrado |
 | 404 | `TABLE_NOT_FOUND` | Mesa no existe |
+| 404 | `MENU_CATEGORY_NOT_FOUND` | Categoría no existe |
+| 404 | `DISH_NOT_FOUND` | Plato no existe |
+| 404 | `PUBLIC_MENU_NOT_FOUND` | Menú público no disponible |
 | 409 | `TABLE_CODE_ALREADY_EXISTS` | Código de mesa duplicado |
+| 409 | `MENU_CATEGORY_NAME_ALREADY_EXISTS` | Nombre de categoría duplicado |
+| 409 | `DISH_NAME_ALREADY_EXISTS` | Nombre de plato duplicado |
 | 422 | `BRANCH_SCHEDULE_REQUIRED` | Activar sin horarios |
 | 422 | `LAST_ADMIN_REQUIRED` | No se puede eliminar al último admin |
 | 422 | `INVALID_ROLE_BRANCH` | Rol y sucursal incompatibles |

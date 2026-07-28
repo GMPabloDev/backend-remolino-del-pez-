@@ -25,10 +25,15 @@
 | 404 | `BRANCH_NOT_FOUND` | Sucursal no existe |
 | 404 | `USER_NOT_FOUND` | Usuario no existe |
 | 404 | `TABLE_NOT_FOUND` | Mesa no existe |
+| 404 | `MENU_CATEGORY_NOT_FOUND` | Categoría no existe |
+| 404 | `DISH_NOT_FOUND` | Plato no existe |
+| 404 | `PUBLIC_MENU_NOT_FOUND` | Menú público no disponible |
 | 409 | `RESTAURANT_ALREADY_EXISTS` | Ya existe un restaurante |
 | 409 | `BRANCH_CODE_ALREADY_EXISTS` | Código de sucursal duplicado |
 | 409 | `BRANCH_SCHEDULE_CONFLICT` | Horarios solapados |
 | 409 | `TABLE_CODE_ALREADY_EXISTS` | Código de mesa duplicado |
+| 409 | `MENU_CATEGORY_NAME_ALREADY_EXISTS` | Nombre de categoría duplicado |
+| 409 | `DISH_NAME_ALREADY_EXISTS` | Nombre de plato duplicado |
 | 409 | `USER_EMAIL_ALREADY_EXISTS` | Email ya registrado |
 | 422 | `BRANCH_SCHEDULE_REQUIRED` | Activar sin horarios |
 | 422 | `LAST_ADMIN_REQUIRED` | Último admin activo |
@@ -397,3 +402,289 @@ Reemplaza todos los intervalos atómicamente.
 - Se permite activar mesas incluso si la sucursal está inactiva.
 
 **Errores:** `404 TABLE_NOT_FOUND`
+
+---
+
+## Catálogo — Categorías (requiere `Authorization: Bearer <accessToken>`)
+
+| Método | Ruta | Roles |
+|--------|------|-------|
+| `POST` | `/restaurants/:rid/menu/categories` | `admin`, `manager` |
+| `GET` | `/restaurants/:rid/menu/categories` | Todos |
+| `GET` | `/restaurants/:rid/menu/categories/:cid` | Todos |
+| `PATCH` | `/restaurants/:rid/menu/categories/:cid` | `admin`, `manager` |
+| `PATCH` | `/restaurants/:rid/menu/categories/:cid/status` | `admin`, `manager` |
+
+### POST /restaurants/:restaurantId/menu/categories
+
+```json
+{
+  "name": "Fondos",
+  "position": 2
+}
+```
+
+- `name`: 1-80 caracteres, único por restaurante (sin distinguir mayúsculas/minúsculas).
+- `position`: entero positivo.
+- La categoría se crea con estado `inactive`.
+
+**Response 201:**
+```json
+{
+  "id": "uuid",
+  "restaurantId": "uuid",
+  "name": "Fondos",
+  "position": 2,
+  "status": "inactive",
+  "createdAt": "ISO8601",
+  "updatedAt": "ISO8601"
+}
+```
+
+**Errores:** `409 MENU_CATEGORY_NAME_ALREADY_EXISTS`, `404 RESTAURANT_NOT_FOUND`
+
+### GET /restaurants/:restaurantId/menu/categories
+
+**Query:** `?status=active|inactive` (opcional).
+
+**Response 200:** `MenuCategory[]`, ordenado por `position` ascendente y `name` ascendente.
+
+### GET /restaurants/:restaurantId/menu/categories/:categoryId
+
+**Errores:** `404 MENU_CATEGORY_NOT_FOUND`
+
+### PATCH /restaurants/:restaurantId/menu/categories/:categoryId
+
+```json
+{ "name": "Nuevo nombre", "position": 3 }
+```
+
+Todos los campos opcionales.
+
+**Errores:** `404 MENU_CATEGORY_NOT_FOUND`, `409 MENU_CATEGORY_NAME_ALREADY_EXISTS`
+
+### PATCH /restaurants/:restaurantId/menu/categories/:categoryId/status
+
+```json
+{ "status": "active" }
+```
+
+- Desactivar una categoría conserva sus platos y configuraciones por sucursal.
+
+---
+
+## Catálogo — Platos (requiere `Authorization: Bearer <accessToken>`)
+
+| Método | Ruta | Roles |
+|--------|------|-------|
+| `POST` | `/restaurants/:rid/menu/dishes` | `admin`, `manager` |
+| `GET` | `/restaurants/:rid/menu/dishes` | Todos |
+| `GET` | `/restaurants/:rid/menu/dishes/:did` | Todos |
+| `PATCH` | `/restaurants/:rid/menu/dishes/:did` | `admin`, `manager` |
+| `PATCH` | `/restaurants/:rid/menu/dishes/:did/status` | `admin`, `manager` |
+
+### POST /restaurants/:restaurantId/menu/dishes
+
+```json
+{
+  "name": "Lomo saltado",
+  "description": "Lomo de res con papas y arroz",
+  "imageUrl": "https://example.com/lomo.jpg",
+  "ingredients": ["Lomo de res", "Papa", "Arroz"],
+  "allergens": ["Soya"],
+  "categoryId": "uuid",
+  "position": 1
+}
+```
+
+- `name`: 1-120 caracteres, único por restaurante.
+- `description`: 1-1000 caracteres.
+- `imageUrl`: nulo o URL `http/https` de hasta 2048 caracteres.
+- `ingredients`: máx. 50 elementos de 1-100 caracteres.
+- `allergens`: máx. 30 elementos de 1-100 caracteres.
+- Ingredientes y alérgenos se normalizan: recorte, sin vacíos, sin duplicados case-insensitive.
+- `categoryId`: UUID de una categoría del mismo restaurante.
+- `position`: entero positivo.
+- El plato se crea con estado `inactive`.
+
+**Response 201:**
+```json
+{
+  "id": "uuid",
+  "restaurantId": "uuid",
+  "categoryId": "uuid",
+  "categoryName": "Fondos",
+  "name": "Lomo saltado",
+  "description": "Lomo de res con papas y arroz",
+  "imageUrl": "https://example.com/lomo.jpg",
+  "ingredients": ["Lomo de res", "Papa", "Arroz"],
+  "allergens": ["Soya"],
+  "position": 1,
+  "status": "inactive",
+  "createdAt": "ISO8601",
+  "updatedAt": "ISO8601"
+}
+```
+
+**Errores:** `409 DISH_NAME_ALREADY_EXISTS`, `404 MENU_CATEGORY_NOT_FOUND`, `404 RESTAURANT_NOT_FOUND`
+
+### GET /restaurants/:restaurantId/menu/dishes
+
+**Query:** `?status=active|inactive` (opcional).
+
+**Response 200:** `DishDto[]`, ordenado por `position` ascendente y `name` ascendente.
+
+### GET /restaurants/:restaurantId/menu/dishes/:dishId
+
+**Errores:** `404 DISH_NOT_FOUND`
+
+### PATCH /restaurants/:restaurantId/menu/dishes/:dishId
+
+Todos los campos opcionales. `imageUrl` acepta `null` para eliminar la referencia.
+
+```json
+{
+  "name": "Nuevo nombre",
+  "description": "Nueva descripción",
+  "imageUrl": null,
+  "ingredients": ["Nuevo ingrediente"],
+  "allergens": [],
+  "categoryId": "uuid",
+  "position": 3
+}
+```
+
+- Actualizar `ingredients` o `allergens` reemplaza la lista completa.
+
+**Errores:** `404 DISH_NOT_FOUND`, `409 DISH_NAME_ALREADY_EXISTS`, `404 MENU_CATEGORY_NOT_FOUND`
+
+### PATCH /restaurants/:restaurantId/menu/dishes/:dishId/status
+
+```json
+{ "status": "active" }
+```
+
+- Desactivar un plato conserva sus configuraciones por sucursal.
+
+---
+
+## Catálogo — Configuración por sucursal (requiere `Authorization: Bearer <accessToken>`)
+
+| Método | Ruta | Roles |
+|--------|------|-------|
+| `GET` | `/restaurants/:rid/branches/:bid/dishes` | Todos (restringido) |
+| `PUT` | `/restaurants/:rid/branches/:bid/dishes/:did` | `admin`, `manager`, `branch_admin`* |
+
+> \* `branch_admin` solo sobre su sucursal asignada; otra sucursal → `403 FORBIDDEN`.
+
+### GET /restaurants/:restaurantId/branches/:branchId/dishes
+
+Devuelve todos los platos globales con su configuración local o `null`.
+
+**Response 200:**
+```json
+[
+  {
+    "id": "uuid",
+    "restaurantId": "uuid",
+    "categoryId": "uuid",
+    "categoryName": "Fondos",
+    "name": "Lomo saltado",
+    "description": "Lomo de res con papas y arroz",
+    "imageUrl": "https://example.com/lomo.jpg",
+    "ingredients": ["Lomo de res", "Papa", "Arroz"],
+    "allergens": ["Soya"],
+    "position": 1,
+    "status": "active",
+    "branchConfiguration": {
+      "price": "35.90",
+      "status": "available"
+    },
+    "createdAt": "ISO8601",
+    "updatedAt": "ISO8601"
+  }
+]
+```
+
+### PUT /restaurants/:restaurantId/branches/:branchId/dishes/:dishId
+
+Crea o reemplaza la configuración comercial de un plato en una sucursal. Idempotente.
+
+```json
+{
+  "price": "35.90",
+  "status": "available"
+}
+```
+
+- `price`: cadena decimal con exactamente dos posiciones (ej. `"35.90"`). Mayor que `0.00` y máximo `99999999.99`.
+- `status`: `available`, `sold_out` o `inactive`.
+
+**Response 200:**
+```json
+{
+  "price": "35.90",
+  "status": "available"
+}
+```
+
+- Configurar un plato no requiere que la categoría, el plato o la sucursal estén activos.
+
+**Errores:** `404 BRANCH_NOT_FOUND`, `404 DISH_NOT_FOUND`, `403 FORBIDDEN`
+
+---
+
+## Menú público (sin autenticación)
+
+| Método | Ruta |
+|--------|------|
+| `GET` | `/public/restaurants/:rid/branches/:bid/menu` |
+
+### GET /public/restaurants/:restaurantId/branches/:branchId/menu
+
+Devuelve el menú publicable de una sucursal activa. Sin autenticación.
+
+**Response 200** (sucursal activa sin platos publicables):
+```json
+{
+  "restaurantId": "uuid",
+  "branchId": "uuid",
+  "categories": []
+}
+```
+
+**Response 200** (con platos):
+```json
+{
+  "restaurantId": "uuid",
+  "branchId": "uuid",
+  "categories": [
+    {
+      "id": "uuid",
+      "name": "Fondos",
+      "position": 2,
+      "dishes": [
+        {
+          "id": "uuid",
+          "name": "Lomo saltado",
+          "description": "Lomo de res con papas y arroz",
+          "imageUrl": "https://example.com/lomo.jpg",
+          "ingredients": ["Lomo de res", "Papa", "Arroz"],
+          "allergens": ["Soya"],
+          "position": 1,
+          "price": "35.90",
+          "status": "available"
+        }
+      ]
+    }
+  ]
+}
+```
+
+- Solo aparecen categorías activas, platos activos y configuraciones `available` o `sold_out`.
+- Configuraciones `inactive` y platos sin configuración local se omiten.
+- Categorías sin platos publicables se omiten.
+- Platos `sold_out` aparecen marcados pero visibles.
+- Categorías y platos se ordenan por `position` ascendente y `name` ascendente.
+
+**Errores:** `404 PUBLIC_MENU_NOT_FOUND` (restaurante o sucursal inexistente, no relacionados, o sucursal inactiva).
