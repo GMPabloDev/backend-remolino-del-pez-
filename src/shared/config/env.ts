@@ -2,10 +2,10 @@ import { z } from "zod";
 
 const envSchema = z.object({
 	DATABASE_URL: z.string().url(),
-	ADMIN_NAME: z.string().min(1),
-	ADMIN_EMAIL: z.string().email(),
-	ADMIN_PASSWORD: z.string().min(10),
-	ACCESS_TOKEN_SECRET: z.string().min(32),
+	ADMIN_NAME: z.string().min(1).optional(),
+	ADMIN_EMAIL: z.string().email().optional(),
+	ADMIN_PASSWORD: z.string().min(10).optional(),
+	ACCESS_TOKEN_SECRET: z.string().min(32).optional(),
 	ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(25),
 	REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
 });

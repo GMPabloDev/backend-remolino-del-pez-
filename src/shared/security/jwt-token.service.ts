@@ -8,6 +8,12 @@ export class JwtTokenService implements TokenService {
 	private readonly accessTokenTtl: string;
 
 	constructor() {
+		if (!env.ACCESS_TOKEN_SECRET) {
+			throw new Error(
+				"Falta la variable de entorno ACCESS_TOKEN_SECRET. Revisa el archivo .env.example.",
+			);
+		}
+
 		this.secret = new TextEncoder().encode(env.ACCESS_TOKEN_SECRET);
 		this.accessTokenTtl = `${env.ACCESS_TOKEN_TTL_MINUTES}m`;
 	}
@@ -29,9 +35,13 @@ export class JwtTokenService implements TokenService {
 			algorithms: ["HS256"],
 		});
 
+		if (!payload.sub || !payload.jti) {
+			throw new Error("Token inválido: faltan claims requeridos (sub, jti)");
+		}
+
 		return {
-			sub: payload.sub!,
-			sid: payload.jti!,
+			sub: payload.sub,
+			sid: payload.jti,
 		};
 	}
 
