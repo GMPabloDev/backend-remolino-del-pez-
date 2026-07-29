@@ -33,6 +33,13 @@ import { UpdateCategoryStatusUseCaseImpl } from "./modules/menu/use-cases/update
 import { UpdateDishUseCaseImpl } from "./modules/menu/use-cases/update-dish/update-dish.use-case.impl";
 import { UpdateDishStatusUseCaseImpl } from "./modules/menu/use-cases/update-dish-status/update-dish-status.use-case.impl";
 import { UpsertBranchDishUseCaseImpl } from "./modules/menu/use-cases/upsert-branch-dish/upsert-branch-dish.use-case.impl";
+import { PrismaPaymentRepository } from "./modules/payments/repositories/prisma-payment.repository";
+import { createPaymentRouter } from "./modules/payments/router";
+import { StripePaymentGatewayService } from "./modules/payments/services/stripe-payment-gateway.service";
+import { CreateCheckoutUseCaseImpl } from "./modules/payments/use-cases/create-checkout/create-checkout.use-case.impl";
+import { GetPaymentStatusUseCaseImpl } from "./modules/payments/use-cases/get-payment-status/get-payment-status.use-case.impl";
+import { ProcessStripeWebhookUseCaseImpl } from "./modules/payments/use-cases/process-stripe-webhook/process-stripe-webhook.use-case.impl";
+import { createStripeWebhookRouter } from "./modules/payments/webhook.router";
 import { PrismaReservationRepository } from "./modules/reservations/repositories/prisma-reservation.repository";
 import { createReservationRouter } from "./modules/reservations/router";
 import { HmacCheckoutTokenService } from "./modules/reservations/services/hmac-checkout-token.service";
@@ -80,6 +87,7 @@ const menuCategoryRepository = new PrismaMenuCategoryRepository();
 const dishRepository = new PrismaDishRepository();
 const branchDishRepository = new PrismaBranchDishRepository();
 const reservationRepository = new PrismaReservationRepository();
+const paymentRepository = new PrismaPaymentRepository();
 const userRepository = new PrismaUserRepository();
 const authRepository = new PrismaAuthRepository();
 
@@ -236,6 +244,20 @@ const createTemporaryReservation = new CreateTemporaryReservationUseCaseImpl(
 	checkoutTokenService,
 );
 
+// --- Servicios de pago ---
+const paymentGateway = new StripePaymentGatewayService(env);
+
+// --- Casos de uso: Pagos ---
+const createCheckout = new CreateCheckoutUseCaseImpl(
+	paymentRepository,
+	paymentGateway,
+);
+const getPaymentStatus = new GetPaymentStatusUseCaseImpl(paymentRepository);
+const processStripeWebhook = new ProcessStripeWebhookUseCaseImpl(
+	paymentRepository,
+	paymentGateway,
+);
+
 // --- Casos de uso: Autenticación ---
 const login = new LoginUseCaseImpl(
 	authRepository,
@@ -366,6 +388,22 @@ app.route(
 	createReservationRouter({
 		getAvailability,
 		createTemporaryReservation,
+	}),
+);
+
+// --- Rutas: Pagos públicos ---
+app.route(
+	"/public/restaurants/:restaurantId/branches/:branchId",
+	createPaymentRouter({
+		createCheckout,
+		getPaymentStatus,
+	}),
+);
+
+app.route(
+	"/webhooks/stripe",
+	createStripeWebhookRouter({
+		processStripeWebhook,
 	}),
 );
 
