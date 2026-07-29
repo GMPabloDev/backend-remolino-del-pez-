@@ -1,6 +1,6 @@
 # SPEC 06 — Checkout y pagos con Stripe
 
-> **Status:** Draft
+> **Status:** Aprobado
 > **Depends on:** SPEC 05
 > **Date:** 2026-07-28
 > **Objective:** Implementar checkout público con Stripe Checkout Sessions para cobrar reservas temporales, confirmarlas mediante webhooks y reembolsar automáticamente los pagos tardíos.
