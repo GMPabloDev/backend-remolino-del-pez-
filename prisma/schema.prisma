@@ -49,6 +49,26 @@ enum ReservationStatus {
   CONFIRMED
 }
 
+enum PaymentProvider {
+  STRIPE
+}
+
+enum PaymentAttemptStatus {
+  PENDING
+  PAID
+  FAILED
+  EXPIRED
+  REFUND_PENDING
+  REFUNDED
+  REFUND_FAILED
+}
+
+enum PaymentWebhookStatus {
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
 model Restaurant {
   id             String         @id @default(uuid()) @db.Uuid
   name           String
@@ -221,26 +241,32 @@ model BranchDish {
 }
 
 model Reservation {
-  id             String            @id @default(uuid()) @db.Uuid
-  branchId       String            @db.Uuid
-  tableId        String            @db.Uuid
-  idempotencyKey String            @unique @db.Uuid
-  requestHash    String            @db.VarChar(64)
-  status         ReservationStatus @default(PENDING_PAYMENT)
-  fullName       String            @db.VarChar(150)
-  email          String            @db.VarChar(320)
-  phone          String            @db.VarChar(16)
-  partySize      Int
-  startAt        DateTime          @db.Timestamptz(3)
-  endAt          DateTime          @db.Timestamptz(3)
-  expiresAt      DateTime          @db.Timestamptz(3)
-  currency       String            @db.Char(3)
-  total          Decimal           @db.Decimal(10, 2)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  branch         Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  table          DiningTable       @relation(fields: [tableId], references: [id], onDelete: Restrict)
-  items          ReservationItem[]
+  id                        String            @id @default(uuid()) @db.Uuid
+  branchId                  String            @db.Uuid
+  tableId                   String            @db.Uuid
+  idempotencyKey            String            @unique @db.Uuid
+  requestHash               String            @db.VarChar(64)
+  status                    ReservationStatus @default(PENDING_PAYMENT)
+  fullName                  String            @db.VarChar(150)
+  email                     String            @db.VarChar(320)
+  phone                     String            @db.VarChar(16)
+  partySize                 Int
+  startAt                   DateTime          @db.Timestamptz(3)
+  endAt                     DateTime          @db.Timestamptz(3)
+  expiresAt                 DateTime          @db.Timestamptz(3)
+  currency                  String            @db.Char(3)
+  total                     Decimal           @db.Decimal(10, 2)
+  checkoutTokenVersion      String?           @db.Uuid
+  checkoutTokenHash         String?           @unique @db.Char(64)
+  confirmedAt               DateTime?         @db.Timestamptz(3)
+  confirmedPaymentAttemptId String?           @unique @db.Uuid
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  branch                    Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  table                     DiningTable       @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  items                     ReservationItem[]
+  paymentAttempts           PaymentAttempt[]
+  confirmedPaymentAttempt   PaymentAttempt?   @relation("ConfirmedPaymentAttempt", fields: [confirmedPaymentAttemptId], references: [id], onDelete: Restrict)
 
   @@index([branchId, status, startAt, endAt])
   @@index([tableId, status, startAt, endAt])
@@ -261,4 +287,45 @@ model ReservationItem {
 
   @@unique([reservationId, dishId])
   @@index([dishId])
+}
+
+model PaymentAttempt {
+  id                        String               @id @default(uuid()) @db.Uuid
+  reservationId             String               @db.Uuid
+  provider                  PaymentProvider      @default(STRIPE)
+  status                    PaymentAttemptStatus @default(PENDING)
+  amount                    Decimal              @db.Decimal(10, 2)
+  currency                  String               @db.Char(3)
+  providerCheckoutSessionId String?              @unique @db.VarChar(255)
+  providerPaymentIntentId   String?              @unique @db.VarChar(255)
+  providerRefundId          String?              @unique @db.VarChar(255)
+  checkoutUrl               String?              @db.VarChar(2048)
+  providerExpiresAt         DateTime?            @db.Timestamptz(3)
+  paidAt                    DateTime?            @db.Timestamptz(3)
+  refundedAt                DateTime?            @db.Timestamptz(3)
+  failedAt                  DateTime?            @db.Timestamptz(3)
+  lastErrorCode             String?              @db.VarChar(100)
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+  reservation               Reservation          @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  confirmedReservation      Reservation?         @relation("ConfirmedPaymentAttempt")
+
+  @@index([reservationId, createdAt])
+  @@index([provider, status])
+  @@index([status, updatedAt])
+}
+
+model PaymentWebhookEvent {
+  id                 String               @id @default(uuid()) @db.Uuid
+  provider           PaymentProvider      @default(STRIPE)
+  providerEventId    String               @unique @db.VarChar(255)
+  eventType          String               @db.VarChar(120)
+  status             PaymentWebhookStatus @default(PROCESSING)
+  processingAttempts Int                  @default(1)
+  lastErrorCode      String?              @db.VarChar(100)
+  processedAt        DateTime?            @db.Timestamptz(3)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([provider, status, updatedAt])
 }

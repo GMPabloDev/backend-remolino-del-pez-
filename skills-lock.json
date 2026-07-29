@@ -1,85 +1,85 @@
 {
-  "version": 1,
-  "skills": {
-    "bun": {
-      "source": "midudev/autoskills",
-      "sourceType": "autoskills-registry",
-      "computedHash": "1386ed5490ed278e38312a416c9aa074dbe3849f32ae7f841e4142fef5d4df94"
-    },
-    "hono": {
-      "source": "yusukebe/hono-skill",
-      "sourceType": "autoskills-registry",
-      "computedHash": "bc1c40e71ec13faa82ab7e9464bfd57cc282780a1087b021d26ba0d2c082059b"
-    },
-    "prisma-cli": {
-      "source": "prisma/skills",
-      "sourceType": "autoskills-registry",
-      "computedHash": "d2b4e410bb24df07e0a399cf1fd70ca6a2f696079f7e6445eb602116566d2278"
-    },
-    "prisma-client-api": {
-      "source": "prisma/skills",
-      "sourceType": "autoskills-registry",
-      "computedHash": "922d6b5b4eb4387e72e409fa063f8e1bffb9037aed595cba0d3c257f418b6c18"
-    },
-    "prisma-compute": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-compute/SKILL.md",
-      "computedHash": "1f1cb3f035474a5a3d30b75ff2cfd4af380025c10e0c20f539a26e43f5931eb1"
-    },
-    "prisma-database-setup": {
-      "source": "prisma/skills",
-      "sourceType": "autoskills-registry",
-      "computedHash": "50c6cbc7090ef356c026cb76352952b83b65bee8b3f3c7ac337461f5b352e9b9"
-    },
-    "prisma-driver-adapter-implementation": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-driver-adapter-implementation/SKILL.md",
-      "computedHash": "2e00b0d05f0da23796f6d44684e19219b74cf993f8a2df6e5b044812f375bbc6"
-    },
-    "prisma-mongodb-upgrade": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-mongodb-upgrade/SKILL.md",
-      "computedHash": "b94149ad5f1ec269dfd717b321538de6d39943b2ae6721a0d82302057f57ae18"
-    },
-    "prisma-postgres": {
-      "source": "prisma/skills",
-      "sourceType": "autoskills-registry",
-      "computedHash": "3adda04ae85b8593cfca45d48d5d410ddffb2797ea53f6dc9dfe34b8d71d35e9"
-    },
-    "prisma-postgres-setup": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-postgres-setup/SKILL.md",
-      "computedHash": "5dbcf5a488d7cb7136340b86dcf781d6d92cf793f92c105ef644ac31ccac4d3b"
-    },
-    "prisma-upgrade-v7": {
-      "source": "prisma/skills",
-      "sourceType": "github",
-      "skillPath": "prisma-upgrade-v7/SKILL.md",
-      "computedHash": "0e07dc2831f86cf27627df914db43d862b0fc75d72c1f9070434aab7940bad7c"
-    },
-    "stripe-best-practices": {
-      "source": "stripe/ai",
-      "sourceType": "autoskills-registry",
-      "computedHash": "0ca31a5a3c2631cd0419ba2e186e962773718799d2b281551c0e48195693350f"
-    },
-    "typescript-advanced-types": {
-      "source": "wshobson/agents",
-      "sourceType": "autoskills-registry",
-      "computedHash": "5ca0e177c6aaaba1889255691224daafdb7d71f317cc70bede1590d3907ded42"
-    },
-    "upgrade-stripe": {
-      "source": "stripe/ai",
-      "sourceType": "autoskills-registry",
-      "computedHash": "017906619cae467ebfac534bed0dc25d1c157dd55bfb0530fb5d38d2418b426c"
-    },
-    "zod": {
-      "source": "pproenca/dot-skills",
-      "sourceType": "autoskills-registry",
-      "computedHash": "aa8a97195b07763d37494b511f48be90979fd6826c031956c831cfc58f6a24b8"
-    }
-  }
+	"version": 1,
+	"skills": {
+		"bun": {
+			"source": "midudev/autoskills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "1386ed5490ed278e38312a416c9aa074dbe3849f32ae7f841e4142fef5d4df94"
+		},
+		"hono": {
+			"source": "yusukebe/hono-skill",
+			"sourceType": "autoskills-registry",
+			"computedHash": "bc1c40e71ec13faa82ab7e9464bfd57cc282780a1087b021d26ba0d2c082059b"
+		},
+		"prisma-cli": {
+			"source": "prisma/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "d2b4e410bb24df07e0a399cf1fd70ca6a2f696079f7e6445eb602116566d2278"
+		},
+		"prisma-client-api": {
+			"source": "prisma/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "922d6b5b4eb4387e72e409fa063f8e1bffb9037aed595cba0d3c257f418b6c18"
+		},
+		"prisma-compute": {
+			"source": "prisma/skills",
+			"sourceType": "github",
+			"skillPath": "prisma-compute/SKILL.md",
+			"computedHash": "1f1cb3f035474a5a3d30b75ff2cfd4af380025c10e0c20f539a26e43f5931eb1"
+		},
+		"prisma-database-setup": {
+			"source": "prisma/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "50c6cbc7090ef356c026cb76352952b83b65bee8b3f3c7ac337461f5b352e9b9"
+		},
+		"prisma-driver-adapter-implementation": {
+			"source": "prisma/skills",
+			"sourceType": "github",
+			"skillPath": "prisma-driver-adapter-implementation/SKILL.md",
+			"computedHash": "2e00b0d05f0da23796f6d44684e19219b74cf993f8a2df6e5b044812f375bbc6"
+		},
+		"prisma-mongodb-upgrade": {
+			"source": "prisma/skills",
+			"sourceType": "github",
+			"skillPath": "prisma-mongodb-upgrade/SKILL.md",
+			"computedHash": "b94149ad5f1ec269dfd717b321538de6d39943b2ae6721a0d82302057f57ae18"
+		},
+		"prisma-postgres": {
+			"source": "prisma/skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "3adda04ae85b8593cfca45d48d5d410ddffb2797ea53f6dc9dfe34b8d71d35e9"
+		},
+		"prisma-postgres-setup": {
+			"source": "prisma/skills",
+			"sourceType": "github",
+			"skillPath": "prisma-postgres-setup/SKILL.md",
+			"computedHash": "5dbcf5a488d7cb7136340b86dcf781d6d92cf793f92c105ef644ac31ccac4d3b"
+		},
+		"prisma-upgrade-v7": {
+			"source": "prisma/skills",
+			"sourceType": "github",
+			"skillPath": "prisma-upgrade-v7/SKILL.md",
+			"computedHash": "0e07dc2831f86cf27627df914db43d862b0fc75d72c1f9070434aab7940bad7c"
+		},
+		"stripe-best-practices": {
+			"source": "stripe/ai",
+			"sourceType": "autoskills-registry",
+			"computedHash": "0ca31a5a3c2631cd0419ba2e186e962773718799d2b281551c0e48195693350f"
+		},
+		"typescript-advanced-types": {
+			"source": "wshobson/agents",
+			"sourceType": "autoskills-registry",
+			"computedHash": "5ca0e177c6aaaba1889255691224daafdb7d71f317cc70bede1590d3907ded42"
+		},
+		"upgrade-stripe": {
+			"source": "stripe/ai",
+			"sourceType": "autoskills-registry",
+			"computedHash": "017906619cae467ebfac534bed0dc25d1c157dd55bfb0530fb5d38d2418b426c"
+		},
+		"zod": {
+			"source": "pproenca/dot-skills",
+			"sourceType": "autoskills-registry",
+			"computedHash": "aa8a97195b07763d37494b511f48be90979fd6826c031956c831cfc58f6a24b8"
+		}
+	}
 }

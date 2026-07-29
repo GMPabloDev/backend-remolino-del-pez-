@@ -8,6 +8,11 @@ const envSchema = z.object({
 	ACCESS_TOKEN_SECRET: z.string().min(32).optional(),
 	ACCESS_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(25),
 	REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+	CHECKOUT_TOKEN_SECRET: z.string().min(32),
+	STRIPE_SECRET_KEY: z.string().min(1),
+	STRIPE_WEBHOOK_SECRET: z.string().min(1),
+	STRIPE_CHECKOUT_SUCCESS_URL: z.string().url(),
+	STRIPE_CHECKOUT_CANCEL_URL: z.string().url(),
 });
 
 export type Env = z.infer<typeof envSchema>;
