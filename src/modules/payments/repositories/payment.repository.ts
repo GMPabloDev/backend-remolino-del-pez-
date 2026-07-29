@@ -67,6 +67,10 @@ export interface PaymentRepository {
 		restaurantId: string,
 	): Promise<PaymentReservationContext | null>;
 
+	findReservationById(
+		reservationId: string,
+	): Promise<PaymentReservationContext | null>;
+
 	// Intentos de pago
 	findLatestAttemptByReservation(
 		reservationId: string,

@@ -1,0 +1,290 @@
+import { Prisma } from "../../../../generated/prisma/client";
+import type { PaymentRepository } from "../../repositories/payment.repository";
+import type {
+	GatewayWebhookEvent,
+	PaymentGatewayService,
+} from "../../services/payment-gateway.service";
+import type { ProcessStripeWebhookUseCase } from "./process-stripe-webhook.use-case";
+
+/** Clave de idempotencia para reembolsos derivada del intento. */
+function refundIdempotencyKey(attemptId: string): string {
+	return attemptId.replace(/-/g, "");
+}
+
+/** Convierte céntimos a número decimal para comparar con Prisma Decimal. */
+function centsToDecimal(cents: number): Prisma.Decimal {
+	return new Prisma.Decimal(cents).div(100);
+}
+
+export class ProcessStripeWebhookUseCaseImpl
+	implements ProcessStripeWebhookUseCase
+{
+	constructor(
+		private readonly paymentRepository: PaymentRepository,
+		private readonly paymentGateway: PaymentGatewayService,
+	) {}
+
+	async execute(rawBody: string, signature: string): Promise<void> {
+		const event = this.paymentGateway.parseWebhookEvent(rawBody, signature);
+
+		// Idempotencia por event.id
+		const existingEvent = await this.paymentRepository.findWebhookEvent(
+			event.providerEventId,
+		);
+
+		if (existingEvent?.status === "PROCESSED") {
+			return; // Ya procesado, responder 200
+		}
+
+		if (existingEvent?.status === "FAILED") {
+			await this.paymentRepository.updateWebhookEvent(existingEvent.id, {
+				status: "PROCESSING",
+			});
+		} else if (!existingEvent) {
+			await this.paymentRepository.createWebhookEvent({
+				provider: "STRIPE",
+				providerEventId: event.providerEventId,
+				eventType: event.eventType,
+			});
+		}
+
+		try {
+			await this.processEvent(event);
+		} catch (error) {
+			// Marcar como FAILED para que Stripe reenvíe
+			const eventRecord = await this.paymentRepository.findWebhookEvent(
+				event.providerEventId,
+			);
+			if (eventRecord) {
+				const errorCode =
+					error instanceof Error ? error.message.slice(0, 100) : null;
+				await this.paymentRepository.updateWebhookEvent(eventRecord.id, {
+					status: "FAILED",
+					lastErrorCode: errorCode,
+				});
+			}
+			throw error;
+		}
+
+		// Éxito → marcar como PROCESSED
+		const eventRecord = await this.paymentRepository.findWebhookEvent(
+			event.providerEventId,
+		);
+		if (eventRecord && eventRecord.status !== "PROCESSED") {
+			await this.paymentRepository.updateWebhookEvent(eventRecord.id, {
+				status: "PROCESSED",
+			});
+		}
+	}
+
+	private async processEvent(event: GatewayWebhookEvent): Promise<void> {
+		switch (event.eventType) {
+			case "checkout.session.completed":
+				await this.handleSessionCompleted(event);
+				break;
+			case "checkout.session.expired":
+				await this.handleSessionExpired(event);
+				break;
+			case "payment_intent.payment_failed":
+				await this.handlePaymentFailed(event);
+				break;
+			case "charge.refunded":
+			case "charge.refund.updated":
+				await this.handleRefundUpdate(event);
+				break;
+			// Eventos no utilizados: responder OK sin cambios
+		}
+	}
+
+	// --- Manejadores de eventos ---
+
+	private async handleSessionCompleted(
+		event: GatewayWebhookEvent,
+	): Promise<void> {
+		if (!event.checkoutSessionId) return;
+
+		const attempt = await this.paymentRepository.findAttemptByProviderSessionId(
+			event.checkoutSessionId,
+		);
+
+		if (attempt?.status !== "PENDING") return;
+
+		const reservation = await this.paymentRepository.findReservationById(
+			attempt.reservationId,
+		);
+
+		// Validamos el importe y moneda reportados por Stripe
+		const expectedAmount = attempt.amount;
+		const paidAmount = event.amount ? centsToDecimal(event.amount) : null;
+		const paidCurrency = event.currency?.toUpperCase();
+
+		const amountMatches =
+			paidAmount !== null && expectedAmount.equals(paidAmount);
+		const currencyMatches = paidCurrency === attempt.currency.toUpperCase();
+
+		if (!amountMatches || !currencyMatches) {
+			await this.refundPayment(attempt, event);
+			return;
+		}
+
+		// Pago válido: intentar confirmar
+		if (!reservation) {
+			await this.refundPayment(attempt, event);
+			return;
+		}
+
+		const paidAt = new Date();
+
+		// ¿Tardío o ya confirmado?
+		if (
+			reservation.status !== "PENDING_PAYMENT" ||
+			reservation.expiresAt <= paidAt ||
+			reservation.confirmedPaymentAttemptId !== null
+		) {
+			await this.refundPayment(attempt, event);
+			return;
+		}
+
+		// Confirmación transaccional
+		const confirmed = await this.paymentRepository.confirmReservation(
+			reservation.id,
+			attempt.id,
+			event.paymentIntentId ?? "",
+			paidAt,
+		);
+
+		if (!confirmed) {
+			// Carrera: otro webhook ya confirmó o venció
+			await this.refundPayment(attempt, event);
+		}
+	}
+
+	private async handleSessionExpired(
+		event: GatewayWebhookEvent,
+	): Promise<void> {
+		if (!event.checkoutSessionId) return;
+
+		const attempt = await this.paymentRepository.findAttemptByProviderSessionId(
+			event.checkoutSessionId,
+		);
+
+		if (attempt?.status === "PENDING") {
+			await this.paymentRepository.updateAttemptStatus(attempt.id, {
+				status: "EXPIRED",
+				failedAt: new Date(),
+			});
+		}
+	}
+
+	private async handlePaymentFailed(event: GatewayWebhookEvent): Promise<void> {
+		if (!event.paymentIntentId) return;
+
+		const attempt =
+			await this.paymentRepository.findAttemptByProviderPaymentIntentId(
+				event.paymentIntentId,
+			);
+
+		if (attempt?.status === "PENDING") {
+			await this.paymentRepository.updateAttemptStatus(attempt.id, {
+				status: "FAILED",
+				failedAt: new Date(),
+			});
+		}
+	}
+
+	private async handleRefundUpdate(event: GatewayWebhookEvent): Promise<void> {
+		if (!event.paymentIntentId) return;
+
+		const attempt =
+			await this.paymentRepository.findAttemptByProviderPaymentIntentId(
+				event.paymentIntentId,
+			);
+
+		if (!attempt) return;
+
+		if (event.refundStatus === "succeeded") {
+			if (
+				attempt.status === "REFUND_PENDING" ||
+				attempt.status === "REFUND_FAILED"
+			) {
+				await this.paymentRepository.updateAttemptStatus(attempt.id, {
+					status: "REFUNDED",
+					providerRefundId: event.refundId ?? attempt.providerRefundId,
+					refundedAt: new Date(),
+				});
+			}
+		} else if (event.refundStatus === "failed") {
+			// Reintentar reembolso con misma clave idempotente
+			if (!attempt.providerPaymentIntentId) return;
+
+			const refundAmount =
+				event.amount ?? Math.round(Number(attempt.amount) * 100);
+
+			await this.paymentRepository.updateAttemptStatus(attempt.id, {
+				status: "REFUND_PENDING",
+			});
+
+			const refundResult = await this.paymentGateway.refund(
+				attempt.providerPaymentIntentId,
+				refundAmount,
+				refundIdempotencyKey(attempt.id),
+			);
+
+			if (refundResult.status === "succeeded") {
+				await this.paymentRepository.updateAttemptStatus(attempt.id, {
+					status: "REFUNDED",
+					providerRefundId: refundResult.providerRefundId,
+					refundedAt: new Date(),
+				});
+			} else if (refundResult.status === "failed") {
+				await this.paymentRepository.updateAttemptStatus(attempt.id, {
+					status: "REFUND_FAILED",
+				});
+			}
+		}
+	}
+
+	// --- Reembolso automático ---
+
+	private async refundPayment(
+		attempt: Awaited<
+			ReturnType<PaymentRepository["findAttemptByProviderSessionId"]>
+		>,
+		event: GatewayWebhookEvent,
+	): Promise<void> {
+		if (!attempt?.providerPaymentIntentId) return;
+
+		await this.paymentRepository.updateAttemptStatus(attempt.id, {
+			status: "REFUND_PENDING",
+			providerPaymentIntentId:
+				event.paymentIntentId ?? attempt.providerPaymentIntentId,
+		});
+
+		try {
+			const refundAmount =
+				event.amount ?? Math.round(Number(attempt.amount) * 100);
+
+			const refundResult = await this.paymentGateway.refund(
+				attempt.providerPaymentIntentId,
+				refundAmount,
+				refundIdempotencyKey(attempt.id),
+			);
+
+			if (refundResult.status === "succeeded") {
+				await this.paymentRepository.updateAttemptStatus(attempt.id, {
+					status: "REFUNDED",
+					providerRefundId: refundResult.providerRefundId,
+					refundedAt: new Date(),
+				});
+			} else if (refundResult.status === "failed") {
+				await this.paymentRepository.updateAttemptStatus(attempt.id, {
+					status: "REFUND_FAILED",
+				});
+			}
+		} catch {
+			await this.paymentRepository.updateAttemptStatus(attempt.id, {
+				status: "REFUND_FAILED",
+			});
+		}
+	}
+}

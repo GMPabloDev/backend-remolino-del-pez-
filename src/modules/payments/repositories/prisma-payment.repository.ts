@@ -18,6 +18,17 @@ const SERIALIZABLE_RETRY_LIMIT = 3;
 export class PrismaPaymentRepository implements PaymentRepository {
 	// --- Contexto de autorización ---
 
+	async findReservationById(
+		reservationId: string,
+	): Promise<PaymentReservationContext | null> {
+		if (!isValidUuid(reservationId)) return null;
+
+		return prisma.reservation.findUnique({
+			where: { id: reservationId },
+			include: RESERVATION_INCLUDE,
+		});
+	}
+
 	async findReservationForPayment(
 		reservationId: string,
 		branchId: string,
