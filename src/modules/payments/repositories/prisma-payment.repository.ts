@@ -93,6 +93,24 @@ export class PrismaPaymentRepository implements PaymentRepository {
 		return prisma.paymentAttempt.create({ data });
 	}
 
+	async setAttemptSessionData(
+		attemptId: string,
+		data: {
+			providerCheckoutSessionId: string;
+			checkoutUrl: string;
+			providerExpiresAt: Date;
+		},
+	) {
+		return prisma.paymentAttempt.update({
+			where: { id: attemptId },
+			data: {
+				providerCheckoutSessionId: data.providerCheckoutSessionId,
+				checkoutUrl: data.checkoutUrl,
+				providerExpiresAt: data.providerExpiresAt,
+			},
+		});
+	}
+
 	async updateAttemptStatus(attemptId: string, data: UpdateAttemptStatusData) {
 		return prisma.paymentAttempt.update({
 			where: { id: attemptId },

@@ -17,6 +17,7 @@ export interface PaymentReservationContext {
 	status: ReservationStatus;
 	expiresAt: Date;
 	confirmedAt: Date | null;
+	email: string;
 	checkoutTokenHash: string | null;
 	checkoutTokenVersion: string | null;
 	confirmedPaymentAttemptId: string | null;
@@ -32,9 +33,9 @@ export interface CreatePaymentAttemptData {
 	provider: PaymentProvider;
 	amount: Prisma.Decimal;
 	currency: string;
-	providerCheckoutSessionId: string;
-	checkoutUrl: string;
-	providerExpiresAt: Date;
+	providerCheckoutSessionId?: string | null;
+	checkoutUrl?: string | null;
+	providerExpiresAt?: Date | null;
 }
 
 // --- Resultado de confirmación ---
@@ -87,6 +88,15 @@ export interface PaymentRepository {
 	): Promise<PaymentAttempt | null>;
 
 	createAttempt(data: CreatePaymentAttemptData): Promise<PaymentAttempt>;
+
+	setAttemptSessionData(
+		attemptId: string,
+		data: {
+			providerCheckoutSessionId: string;
+			checkoutUrl: string;
+			providerExpiresAt: Date;
+		},
+	): Promise<PaymentAttempt>;
 
 	updateAttemptStatus(
 		attemptId: string,
