@@ -16,6 +16,7 @@ export interface PaymentReservationContext {
 	branchId: string;
 	status: ReservationStatus;
 	expiresAt: Date;
+	confirmedAt: Date | null;
 	checkoutTokenHash: string | null;
 	checkoutTokenVersion: string | null;
 	confirmedPaymentAttemptId: string | null;
