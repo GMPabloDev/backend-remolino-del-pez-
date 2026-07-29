@@ -11,6 +11,7 @@ import type {
 	ReservationWithItems,
 } from "../../repositories/reservation.repository";
 import type { CreateTemporaryReservationInput } from "../../schemas/create-temporary-reservation.schema";
+import type { CheckoutTokenService } from "../../services/checkout-token.service";
 import {
 	getIsoDayOfWeek,
 	getReservationDurationMinutes,
@@ -29,6 +30,7 @@ export class CreateTemporaryReservationUseCaseImpl
 {
 	constructor(
 		private readonly reservationRepository: ReservationRepository,
+		private readonly checkoutTokenService: CheckoutTokenService,
 		private readonly now: () => Date = () => new Date(),
 	) {}
 
@@ -131,11 +133,14 @@ export class CreateTemporaryReservationUseCaseImpl
 		const expiresAt = new Date(
 			now.getTime() + TEMPORARY_RESERVATION_MINUTES * 60 * 1000,
 		);
+		const tokenVersion =
+			this.checkoutTokenService.generate("placeholder").version;
 		const result = await this.reservationRepository.createTemporary(
 			{
 				branchId,
 				idempotencyKey,
 				requestHash,
+				checkoutTokenVersion: tokenVersion,
 				fullName: normalizedInput.customer.fullName,
 				email: normalizedInput.customer.email,
 				phone: normalizedInput.customer.phone,
@@ -158,6 +163,12 @@ export class CreateTemporaryReservationUseCaseImpl
 			throw new IdempotencyKeyReusedException();
 		}
 
+		const checkoutToken = await this.ensureCheckoutToken(
+			result.reservation,
+			result.created,
+			tokenVersion,
+		);
+
 		const durationMinutes = result.created
 			? rules.defaultReservationDurationMinutes
 			: getReservationDurationMinutes(
@@ -170,6 +181,7 @@ export class CreateTemporaryReservationUseCaseImpl
 				result.reservation,
 				RESERVATION_TIMEZONE,
 				durationMinutes,
+				checkoutToken,
 			),
 			created: result.created,
 		};
@@ -183,14 +195,48 @@ export class CreateTemporaryReservationUseCaseImpl
 			throw new IdempotencyKeyReusedException();
 		}
 
+		const checkoutToken = this.reconstructToken(reservation);
+
 		return {
 			reservation: toTemporaryReservationDto(
 				reservation,
 				RESERVATION_TIMEZONE,
 				getReservationDurationMinutes(reservation.startAt, reservation.endAt),
+				checkoutToken,
 			),
 			created: false,
 		};
+	}
+
+	private async ensureCheckoutToken(
+		reservation: ReservationWithItems,
+		created: boolean,
+		tokenVersion: string,
+	): Promise<string | null> {
+		if (!created) {
+			return this.reconstructToken(reservation);
+		}
+
+		// Recién creada: reconstruir token con el ID real + la versión ya persistida
+		const token = this.checkoutTokenService.reconstruct(
+			reservation.id,
+			tokenVersion,
+		);
+		const hash = createHash("sha256").update(token).digest("hex");
+		await this.reservationRepository.setCheckoutTokenHash(reservation.id, hash);
+
+		return token;
+	}
+
+	private reconstructToken(reservation: ReservationWithItems): string | null {
+		if (!reservation.checkoutTokenVersion || !reservation.checkoutTokenHash) {
+			return null;
+		}
+
+		return this.checkoutTokenService.reconstruct(
+			reservation.id,
+			reservation.checkoutTokenVersion,
+		);
 	}
 }
 

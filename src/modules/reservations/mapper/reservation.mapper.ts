@@ -19,6 +19,7 @@ export function toTemporaryReservationDto(
 	reservation: ReservationWithItems,
 	timezone: string,
 	durationMinutes: number,
+	checkoutToken: string | null = null,
 ): TemporaryReservationDto {
 	const start = formatDateTime(reservation.startAt, timezone);
 	const end = formatDateTime(reservation.endAt, timezone);
@@ -48,6 +49,7 @@ export function toTemporaryReservationDto(
 		})),
 		currency: reservation.currency,
 		total: reservation.total.toFixed(2),
+		checkoutToken,
 		createdAt: reservation.createdAt.toISOString(),
 	};
 }

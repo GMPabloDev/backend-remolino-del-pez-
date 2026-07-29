@@ -136,6 +136,7 @@ export class PrismaReservationRepository implements ReservationRepository {
 								tableId: table.id,
 								idempotencyKey: data.idempotencyKey,
 								requestHash: data.requestHash,
+								checkoutTokenVersion: data.checkoutTokenVersion,
 								fullName: data.fullName,
 								email: data.email,
 								phone: data.phone,
@@ -171,6 +172,16 @@ export class PrismaReservationRepository implements ReservationRepository {
 		}
 
 		throw new Error("No se pudo completar la transacción de reserva");
+	}
+
+	async setCheckoutTokenHash(
+		reservationId: string,
+		hash: string,
+	): Promise<void> {
+		await prisma.reservation.update({
+			where: { id: reservationId },
+			data: { checkoutTokenHash: hash },
+		});
 	}
 }
 

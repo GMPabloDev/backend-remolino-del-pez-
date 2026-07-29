@@ -27,6 +27,7 @@ export interface CreateTemporaryReservationData {
 	branchId: string;
 	idempotencyKey: string;
 	requestHash: string;
+	checkoutTokenVersion: string;
 	fullName: string;
 	email: string;
 	phone: string;
@@ -76,4 +77,5 @@ export interface ReservationRepository {
 		data: CreateTemporaryReservationData,
 		now: Date,
 	): Promise<ReservationWriteResult | null>;
+	setCheckoutTokenHash(reservationId: string, hash: string): Promise<void>;
 }

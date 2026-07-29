@@ -35,6 +35,7 @@ import { UpdateDishStatusUseCaseImpl } from "./modules/menu/use-cases/update-dis
 import { UpsertBranchDishUseCaseImpl } from "./modules/menu/use-cases/upsert-branch-dish/upsert-branch-dish.use-case.impl";
 import { PrismaReservationRepository } from "./modules/reservations/repositories/prisma-reservation.repository";
 import { createReservationRouter } from "./modules/reservations/router";
+import { HmacCheckoutTokenService } from "./modules/reservations/services/hmac-checkout-token.service";
 import { CreateTemporaryReservationUseCaseImpl } from "./modules/reservations/use-cases/create-temporary-reservation/create-temporary-reservation.use-case.impl";
 import { GetAvailabilityUseCaseImpl } from "./modules/reservations/use-cases/get-availability/get-availability.use-case.impl";
 import { PrismaRestaurantRepository } from "./modules/restaurants/repositories/prisma-restaurant.repository";
@@ -57,6 +58,7 @@ import { ListUsersUseCaseImpl } from "./modules/users/use-cases/list-users/list-
 import { ResetUserPasswordUseCaseImpl } from "./modules/users/use-cases/reset-user-password/reset-user-password.use-case.impl";
 import { UpdateUserUseCaseImpl } from "./modules/users/use-cases/update-user/update-user.use-case.impl";
 import { UpdateUserStatusUseCaseImpl } from "./modules/users/use-cases/update-user-status/update-user-status.use-case.impl";
+import { env } from "./shared/config/env";
 import { errorHandler } from "./shared/errors/error-handler";
 import { BunPasswordService } from "./shared/security/bun-password.service";
 import { JwtTokenService } from "./shared/security/jwt-token.service";
@@ -68,6 +70,7 @@ app.onError(errorHandler);
 // --- Servicios compartidos ---
 const passwordService = new BunPasswordService();
 const tokenService = new JwtTokenService();
+const checkoutTokenService = new HmacCheckoutTokenService(env);
 
 // --- Repositorios ---
 const restaurantRepository = new PrismaRestaurantRepository();
@@ -230,6 +233,7 @@ const getPublicMenu = new GetPublicMenuUseCaseImpl(
 const getAvailability = new GetAvailabilityUseCaseImpl(reservationRepository);
 const createTemporaryReservation = new CreateTemporaryReservationUseCaseImpl(
 	reservationRepository,
+	checkoutTokenService,
 );
 
 // --- Casos de uso: Autenticación ---

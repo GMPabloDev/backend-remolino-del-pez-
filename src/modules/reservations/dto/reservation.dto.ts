@@ -36,5 +36,6 @@ export interface TemporaryReservationDto {
 	items: ReservationItemDto[];
 	currency: string;
 	total: string;
+	checkoutToken: string | null;
 	createdAt: string;
 }
