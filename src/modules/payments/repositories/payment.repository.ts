@@ -1,0 +1,118 @@
+import type {
+	PaymentAttempt,
+	PaymentAttemptStatus,
+	PaymentProvider,
+	PaymentWebhookEvent,
+	PaymentWebhookStatus,
+	Prisma,
+	ReservationItem,
+	ReservationStatus,
+} from "../../../generated/prisma/client";
+
+// --- Contexto de reserva para operaciones de pago ---
+
+export interface PaymentReservationContext {
+	id: string;
+	branchId: string;
+	status: ReservationStatus;
+	expiresAt: Date;
+	checkoutTokenHash: string | null;
+	checkoutTokenVersion: string | null;
+	confirmedPaymentAttemptId: string | null;
+	total: Prisma.Decimal;
+	currency: string;
+	items: ReservationItem[];
+}
+
+// --- Datos de creación de intento ---
+
+export interface CreatePaymentAttemptData {
+	reservationId: string;
+	provider: PaymentProvider;
+	amount: Prisma.Decimal;
+	currency: string;
+	providerCheckoutSessionId: string;
+	checkoutUrl: string;
+	providerExpiresAt: Date;
+}
+
+// --- Resultado de confirmación ---
+
+export interface ConfirmPaymentResult {
+	reservationId: string;
+	attemptId: string;
+}
+
+// --- Datos de actualización de intento ---
+
+export interface UpdateAttemptStatusData {
+	status: PaymentAttemptStatus;
+	providerPaymentIntentId?: string | null;
+	providerRefundId?: string | null;
+	paidAt?: Date | null;
+	refundedAt?: Date | null;
+	failedAt?: Date | null;
+	lastErrorCode?: string | null;
+}
+
+// --- Repositorio ---
+
+export interface PaymentRepository {
+	// Contexto de autorización
+	findReservationForPayment(
+		reservationId: string,
+		branchId: string,
+		restaurantId: string,
+	): Promise<PaymentReservationContext | null>;
+
+	// Intentos de pago
+	findLatestAttemptByReservation(
+		reservationId: string,
+	): Promise<PaymentAttempt | null>;
+
+	findAttemptById(attemptId: string): Promise<PaymentAttempt | null>;
+
+	findAttemptByProviderSessionId(
+		sessionId: string,
+	): Promise<PaymentAttempt | null>;
+
+	findAttemptByProviderPaymentIntentId(
+		paymentIntentId: string,
+	): Promise<PaymentAttempt | null>;
+
+	findPendingAttemptByReservation(
+		reservationId: string,
+		now: Date,
+	): Promise<PaymentAttempt | null>;
+
+	createAttempt(data: CreatePaymentAttemptData): Promise<PaymentAttempt>;
+
+	updateAttemptStatus(
+		attemptId: string,
+		data: UpdateAttemptStatusData,
+	): Promise<PaymentAttempt>;
+
+	// Confirmación transaccional
+	confirmReservation(
+		reservationId: string,
+		attemptId: string,
+		providerPaymentIntentId: string,
+		paidAt: Date,
+	): Promise<ConfirmPaymentResult | null>;
+
+	// Eventos webhook
+	findWebhookEvent(
+		providerEventId: string,
+	): Promise<PaymentWebhookEvent | null>;
+
+	createWebhookEvent(data: {
+		provider: PaymentProvider;
+		providerEventId: string;
+		eventType: string;
+	}): Promise<PaymentWebhookEvent>;
+
+	updateWebhookEvent(
+		id: string,
+		data: { status: PaymentWebhookStatus; lastErrorCode?: string | null },
+	): Promise<PaymentWebhookEvent>;
+}
