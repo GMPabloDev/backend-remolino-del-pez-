@@ -29,6 +29,8 @@
 | 404 | `DISH_NOT_FOUND` | Plato no existe |
 | 404 | `PUBLIC_MENU_NOT_FOUND` | Menú público no disponible |
 | 404 | `PUBLIC_RESERVATION_NOT_FOUND` | Restaurante o sucursal no disponible para reservas |
+| 404 | `PUBLIC_PAYMENT_NOT_FOUND` | Reserva no encontrada o token de checkout inválido |
+| 400 | `INVALID_STRIPE_SIGNATURE` | Firma de webhook Stripe inválida |
 | 409 | `RESTAURANT_ALREADY_EXISTS` | Ya existe un restaurante |
 | 409 | `BRANCH_CODE_ALREADY_EXISTS` | Código de sucursal duplicado |
 | 409 | `BRANCH_SCHEDULE_CONFLICT` | Horarios solapados |
@@ -38,6 +40,10 @@
 | 409 | `RESERVATION_TIME_UNAVAILABLE` | Horario o mesa no disponible |
 | 409 | `DISH_NOT_AVAILABLE` | Plato no disponible en la sucursal |
 | 409 | `IDEMPOTENCY_KEY_REUSED` | Clave reutilizada con otra solicitud |
+| 409 | `RESERVATION_EXPIRED` | La reserva venció y no admite pagos |
+| 409 | `RESERVATION_ALREADY_CONFIRMED` | La reserva ya fue confirmada |
+| 409 | `PAYMENT_STATE_CONFLICT` | Conflicto de estado en el pago |
+| 503 | `PAYMENT_PROVIDER_UNAVAILABLE` | Proveedor de pagos no disponible |
 | 409 | `USER_EMAIL_ALREADY_EXISTS` | Email ya registrado |
 | 422 | `BRANCH_SCHEDULE_REQUIRED` | Activar sin horarios |
 | 422 | `LAST_ADMIN_REQUIRED` | Último admin activo |
@@ -800,11 +806,12 @@ Reglas:
   ],
   "currency": "PEN",
   "total": "71.80",
+  "checkoutToken": "base64url-opaque-token",
   "createdAt": "ISO8601"
 }
 ```
 
-Repetir la misma clave con el mismo payload devuelve `200` con la reserva original, incluso si ya venció. Reutilizarla con otro restaurante, sucursal o payload devuelve `409 IDEMPOTENCY_KEY_REUSED`.
+Repetir la misma clave con el mismo payload devuelve `200` con la reserva original (incluyendo el mismo `checkoutToken`), incluso si ya venció. Reutilizarla con otro restaurante, sucursal o payload devuelve `409 IDEMPOTENCY_KEY_REUSED`.
 
 **Errores:**
 
@@ -813,3 +820,89 @@ Repetir la misma clave con el mismo payload devuelve `200` con la reserva origin
 - `409 RESERVATION_TIME_UNAVAILABLE`
 - `409 DISH_NOT_AVAILABLE`
 - `409 IDEMPOTENCY_KEY_REUSED`
+
+---
+
+## Pagos (Stripe Checkout)
+
+Todas las rutas de pago usan el token opaco devuelto en la creación de la reserva temporal. No requieren sesión de usuario interno.
+
+### POST /public/restaurants/:rid/branches/:bid/reservations/:reservationId/checkout
+
+Crea o reutiliza una Stripe Checkout Session. Body vacío. El importe y moneda se derivan de la reserva; Stripe recibe el total en céntimos de PEN y los line items desde los snapshots.
+
+**Headers:** `Authorization: Bearer <checkoutToken>`
+
+**Response 201 (nueva sesión):**
+```json
+{
+  "reservationId": "uuid",
+  "paymentAttemptId": "uuid",
+  "status": "pending",
+  "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_...",
+  "reservationExpiresAt": "ISO8601",
+  "checkoutExpiresAt": "ISO8601",
+  "currency": "PEN",
+  "total": "71.80"
+}
+```
+
+**Response 200 (sesión pendiente reutilizada):** mismo formato.
+
+**Errores:** `404 PUBLIC_PAYMENT_NOT_FOUND`, `409 RESERVATION_EXPIRED`, `409 RESERVATION_ALREADY_CONFIRMED`, `503 PAYMENT_PROVIDER_UNAVAILABLE`.
+
+---
+
+### GET /public/restaurants/:rid/branches/:bid/reservations/:reservationId/payment
+
+Consulta el estado de la reserva y su último intento de pago. No expone URL de checkout ni identificadores de Stripe.
+
+**Headers:** `Authorization: Bearer <checkoutToken>`
+
+**Response 200:**
+```json
+{
+  "reservationId": "uuid",
+  "reservationStatus": "pending_payment",
+  "payment": {
+    "id": "uuid",
+    "provider": "stripe",
+    "status": "pending",
+    "amount": "71.80",
+    "currency": "PEN",
+    "createdAt": "ISO8601",
+    "updatedAt": "ISO8601"
+  },
+  "total": "71.80",
+  "currency": "PEN",
+  "expiresAt": "ISO8601",
+  "confirmedAt": null
+}
+```
+
+`payment` es `null` si todavía no existe ningún intento.
+
+**Errores:** `404 PUBLIC_PAYMENT_NOT_FOUND`.
+
+---
+
+### POST /webhooks/stripe
+
+Recibe eventos de Stripe. Autenticado por `Stripe-Signature`. Procesa idempotentemente (`event.id` único). Eventos no utilizados responden `200` sin cambios.
+
+**Response 200:** `{ "received": true }`
+
+**Errores:** `400 INVALID_STRIPE_SIGNATURE`. Errores recuperables responden con estado no exitoso → Stripe reintenta.
+
+**Estados de PaymentAttempt:** `pending` → `paid` | `failed` | `expired` | `refund_pending` → `refunded` | `refund_failed`.
+
+**Flujo de confirmación:**
+1. `checkout.session.completed` → valida importe, moneda y vigencia.
+2. Si es válido y oportuno → confirma atómicamente (reserva `confirmed`, intento `paid`).
+3. Si es tardío, duplicado o inconsistente → reembolso automático (`refund_pending` → `refunded`).
+
+**Verificación con Stripe CLI:**
+```sh
+stripe listen --forward-to localhost:3000/webhooks/stripe
+stripe events resend <event-id>
+```

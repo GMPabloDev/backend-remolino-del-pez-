@@ -29,13 +29,11 @@ bun run seed           # Crear el administrador inicial
 
 | Variable | Descripción | Requerida |
 |----------|-------------|-----------|
-| `DATABASE_URL` | Conexión PostgreSQL | Sí |
-| `ADMIN_NAME` | Nombre del admin inicial (seed) | Solo seed |
-| `ADMIN_EMAIL` | Email del admin inicial (seed) | Solo seed |
-| `ADMIN_PASSWORD` | Contraseña del admin inicial (seed) | Solo seed |
-| `ACCESS_TOKEN_SECRET` | Secreto para firmar JWT (mín. 32 caracteres) | Solo auth |
-| `ACCESS_TOKEN_TTL_MINUTES` | Duración del access token (default: 25) | No |
-| `REFRESH_TOKEN_TTL_DAYS` | Duración del refresh token (default: 30) | No |
+| `CHECKOUT_TOKEN_SECRET` | Secreto HMAC para tokens de checkout (mín. 32 caracteres) | Sí |
+| `STRIPE_SECRET_KEY` | Clave secreta de Stripe (sk_test_... o sk_live_...) | Sí |
+| `STRIPE_WEBHOOK_SECRET` | Secreto de firma de webhooks Stripe (whsec_...) | Sí |
+| `STRIPE_CHECKOUT_SUCCESS_URL` | URL de retorno tras pago exitoso | Sí |
+| `STRIPE_CHECKOUT_CANCEL_URL` | URL de retorno tras cancelación | Sí |
 
 ## Desarrollo
 
@@ -667,10 +665,110 @@ Crea un bloqueo de 15 minutos y asigna una única mesa activa con la menor capac
 | 409 | `RESERVATION_TIME_UNAVAILABLE` | Horario o mesa no disponible |
 | 409 | `DISH_NOT_AVAILABLE` | Plato no disponible en la sucursal |
 | 409 | `IDEMPOTENCY_KEY_REUSED` | Clave reutilizada con otra solicitud |
+| 409 | `RESERVATION_EXPIRED` | La reserva venció y no admite pagos |
+| 409 | `RESERVATION_ALREADY_CONFIRMED` | La reserva ya fue confirmada |
+| 409 | `PAYMENT_STATE_CONFLICT` | Conflicto de estado en el pago |
+| 503 | `PAYMENT_PROVIDER_UNAVAILABLE` | Proveedor de pagos no disponible |
+| 400 | `INVALID_STRIPE_SIGNATURE` | Firma de webhook Stripe inválida |
+| 404 | `PUBLIC_PAYMENT_NOT_FOUND` | Reserva no encontrada o token inválido |
 | 422 | `BRANCH_SCHEDULE_REQUIRED` | Activar sin horarios |
 | 422 | `LAST_ADMIN_REQUIRED` | No se puede eliminar al último admin |
 | 422 | `INVALID_ROLE_BRANCH` | Rol y sucursal incompatibles |
 | 500 | `INTERNAL_SERVER_ERROR` | Error interno |
+
+---
+
+## Checkout y pagos con Stripe
+
+Las reservas temporales incluyen un `checkoutToken` opaco (HMAC-SHA256) que autoriza las operaciones de pago. No se requiere sesión de usuario interno.
+
+### POST /public/restaurants/:restaurantId/branches/:branchId/reservations/:reservationId/checkout
+
+Crea o reutiliza una Stripe Checkout Session para pagar la reserva.
+
+**Headers:** `Authorization: Bearer <checkoutToken>`
+
+**Body:** vacío.
+
+**Response 201 (nueva sesión):**
+```json
+{
+  "reservationId": "uuid",
+  "paymentAttemptId": "uuid",
+  "status": "pending",
+  "checkoutUrl": "https://checkout.stripe.com/c/pay/cs_test_...",
+  "reservationExpiresAt": "ISO8601",
+  "checkoutExpiresAt": "ISO8601",
+  "currency": "PEN",
+  "total": "71.80"
+}
+```
+
+**Response 200 (sesión reutilizada):** mismo formato.
+
+**Errores:** `404 PUBLIC_PAYMENT_NOT_FOUND`, `409 RESERVATION_EXPIRED`, `409 RESERVATION_ALREADY_CONFIRMED`, `503 PAYMENT_PROVIDER_UNAVAILABLE`.
+
+### GET /public/restaurants/:restaurantId/branches/:branchId/reservations/:reservationId/payment
+
+Consulta el estado de la reserva y su último intento de pago.
+
+**Headers:** `Authorization: Bearer <checkoutToken>`
+
+**Response 200:**
+```json
+{
+  "reservationId": "uuid",
+  "reservationStatus": "pending_payment",
+  "payment": {
+    "id": "uuid",
+    "provider": "stripe",
+    "status": "pending",
+    "amount": "71.80",
+    "currency": "PEN",
+    "createdAt": "ISO8601",
+    "updatedAt": "ISO8601"
+  },
+  "total": "71.80",
+  "currency": "PEN",
+  "expiresAt": "ISO8601",
+  "confirmedAt": null
+}
+```
+
+`payment` es `null` cuando todavía no existe ningún intento. No expone `checkoutUrl` ni identificadores Stripe.
+
+**Errores:** `404 PUBLIC_PAYMENT_NOT_FOUND`.
+
+### POST /webhooks/stripe
+
+Recibe eventos de Stripe. Autenticado por `Stripe-Signature`. Procesa idempotentemente por `event.id`.
+
+**Response 200:** `{ "received": true }`.
+
+**Errores:** `400 INVALID_STRIPE_SIGNATURE`. Los errores recuperables devuelven estado no exitoso para que Stripe reintente.
+
+### Flujo de pago
+
+1. Crear reserva temporal → obtener `checkoutToken`.
+2. `POST .../checkout` → obtener `checkoutUrl`.
+3. Redirigir al cliente a `checkoutUrl`.
+4. Stripe redirige a `successUrl` o `cancelUrl`.
+5. El frontend consulta `GET .../payment` para esperar la confirmación.
+6. Stripe envía webhook → la reserva pasa a `confirmed`.
+
+Pagos tardíos, duplicados o con importe incorrecto se reembolsan automáticamente.
+
+### Verificación manual con Stripe CLI
+
+```sh
+# Escuchar webhooks localmente
+stripe listen --forward-to localhost:3000/webhooks/stripe
+
+# Reenviar un evento específico
+stripe events resend <event-id>
+
+# Tarjetas de prueba: 4242 4242 4242 4242 (éxito), 4000 0000 0000 0002 (rechazo)
+```
 
 ---
 
