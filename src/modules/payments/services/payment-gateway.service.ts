@@ -46,7 +46,10 @@ export interface PaymentGatewayService {
 		input: CreateCheckoutSessionInput,
 	): Promise<CheckoutSession>;
 
-	parseWebhookEvent(rawBody: string, signature: string): GatewayWebhookEvent;
+	parseWebhookEvent(
+		rawBody: string,
+		signature: string,
+	): Promise<GatewayWebhookEvent>;
 
 	refund(
 		paymentIntentId: string,

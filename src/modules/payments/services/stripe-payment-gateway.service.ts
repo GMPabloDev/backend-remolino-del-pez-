@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import type { Env } from "../../../shared/config/env";
+import { InvalidStripeSignatureException } from "../exceptions/invalid-stripe-signature.exception";
 import type {
 	CheckoutSession,
 	CreateCheckoutSessionInput,
@@ -79,14 +80,21 @@ export class StripePaymentGatewayService implements PaymentGatewayService {
 		};
 	}
 
-	parseWebhookEvent(rawBody: string, signature: string): GatewayWebhookEvent {
-		const event = this.stripe.webhooks.constructEvent(
-			rawBody,
-			signature,
-			this.webhookSecret,
-		);
+	async parseWebhookEvent(
+		rawBody: string,
+		signature: string,
+	): Promise<GatewayWebhookEvent> {
+		try {
+			const event = await this.stripe.webhooks.constructEventAsync(
+				rawBody,
+				signature,
+				this.webhookSecret,
+			);
 
-		return this.mapStripeEvent(event);
+			return this.mapStripeEvent(event);
+		} catch {
+			throw new InvalidStripeSignatureException();
+		}
 	}
 
 	async refund(

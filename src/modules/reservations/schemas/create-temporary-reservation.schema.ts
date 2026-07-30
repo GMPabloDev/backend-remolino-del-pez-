@@ -67,7 +67,7 @@ const itemsSchema = z
 	});
 
 export const createTemporaryReservationHeadersSchema = z.object({
-	"idempotency-key": z.string().uuid(),
+	"idempotency-key": z.uuid(),
 });
 
 export const createTemporaryReservationSchema = z

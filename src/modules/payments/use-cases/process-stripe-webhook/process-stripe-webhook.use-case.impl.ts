@@ -25,7 +25,10 @@ export class ProcessStripeWebhookUseCaseImpl
 	) {}
 
 	async execute(rawBody: string, signature: string): Promise<void> {
-		const event = this.paymentGateway.parseWebhookEvent(rawBody, signature);
+		const event = await this.paymentGateway.parseWebhookEvent(
+			rawBody,
+			signature,
+		);
 
 		// Idempotencia por event.id
 		const existingEvent = await this.paymentRepository.findWebhookEvent(

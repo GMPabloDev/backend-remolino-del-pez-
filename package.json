@@ -5,7 +5,8 @@
 		"typecheck": "tsc --noEmit",
 		"start": "bun src/index.ts",
 		"check": "biome check --write .",
-		"seed": "bun run prisma/seed.ts"
+		"seed": "bun run prisma/seed.ts",
+		"clean": "bun run prisma/clean.ts"
 	},
 	"dependencies": {
 		"@hono/oauth-providers": "^0.8.5",
