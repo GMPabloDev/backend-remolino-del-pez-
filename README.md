@@ -229,6 +229,7 @@ Crea el restaurante (singleton, solo puede existir uno).
 ```json
 {
   "id": "uuid",
+  "slug": "central",
   "name": "Central",
   "legalName": "Central S.A.C.",
   "taxId": "20123456789",
@@ -294,7 +295,7 @@ Todos los campos opcionales. Mismo formato que `POST`.
 - `code` se normaliza a mayúsculas.
 - La sucursal se crea en estado `inactive`.
 
-**Response 201:** sucursal con `id`, `status: "INACTIVE"`, `rules` y `intervals: []`.
+**Response 201:** sucursal con `id`, `restaurantId`, `slug`, `status: "INACTIVE"`, `rules` y `intervals: []`.
 
 **Errores:** `400`, `401`, `403`, `404 RESTAURANT_NOT_FOUND`, `409 BRANCH_CODE_ALREADY_EXISTS`
 
@@ -533,16 +534,30 @@ Configura precio y disponibilidad de un plato para una sucursal. Idempotente.
 
 Lista todos los platos globales con su configuración local (`branchConfiguration`) o `null`.
 
+## Discovery público
+
+### GET /public/restaurants/:restaurantSlug
+
+No requiere autenticación. Devuelve `slug`, `name`, `phone`, `email` y `timezone`. No expone `legalName`, `taxId`, UUID ni timestamps.
+
+**Errores:** `404 RESTAURANT_NOT_FOUND`
+
+### GET /public/restaurants/:restaurantSlug/branches
+
+No requiere autenticación. Devuelve solo sucursales `ACTIVE`, ordenadas por nombre y slug. Cada sucursal incluye `restaurantSlug`, `branchSlug`, ubicación, contacto, reglas e intervalos en formato `HH:mm`. Si no hay sucursales activas, devuelve `200 []`.
+
+**Errores:** `404 RESTAURANT_NOT_FOUND`
+
 ## Menú público
 
-### GET /public/restaurants/:restaurantId/branches/:branchId/menu
+### GET /public/restaurants/:restaurantSlug/branches/:branchSlug/menu
 
 Endpoint público, sin autenticación.
 
 ```json
 {
-  "restaurantId": "uuid",
-  "branchId": "uuid",
+  "restaurantSlug": "central",
+  "branchSlug": "miraflores",
   "categories": [
     {
       "id": "uuid",
@@ -576,7 +591,7 @@ Endpoint público, sin autenticación.
 
 Las reservas temporales no requieren autenticación.
 
-### GET /public/restaurants/:restaurantId/branches/:branchId/reservations/availability
+### GET /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/availability
 
 Consulta horarios disponibles mediante `?date=YYYY-MM-DD&partySize=int`.
 
@@ -591,7 +606,7 @@ Consulta horarios disponibles mediante `?date=YYYY-MM-DD&partySize=int`.
 
 Usa bloques de 15 minutos, aplica horarios, anticipación y `maxPartySize`, y no revela mesas ni cantidades disponibles. Una fecha válida sin opciones devuelve `availableTimes: []`.
 
-### POST /public/restaurants/:restaurantId/branches/:branchId/reservations/temporary
+### POST /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/temporary
 
 Crea un bloqueo de 15 minutos y asigna una única mesa activa con la menor capacidad suficiente. Requiere el header `Idempotency-Key: UUID`.
 
@@ -617,6 +632,7 @@ Crea un bloqueo de 15 minutos y asigna una única mesa activa con la menor capac
 - La asignación y creación usan una transacción `Serializable`; no se combinan mesas.
 - `Reservation` conserva el cliente, intervalo, expiración, estado, total, clave idempotente y hash; `ReservationItem` congela nombre, precio, cantidad y subtotal.
 - La primera creación devuelve `201`; repetir la misma clave y payload devuelve `200` con la reserva original, incluso si venció.
+- La respuesta devuelve `branchSlug`; `reservationId` y `dishId` continúan siendo UUID.
 
 **Errores:** `400 VALIDATION_ERROR`, `404 PUBLIC_RESERVATION_NOT_FOUND`, `409 RESERVATION_TIME_UNAVAILABLE`, `409 DISH_NOT_AVAILABLE`, `409 IDEMPOTENCY_KEY_REUSED`.
 
@@ -682,7 +698,7 @@ Crea un bloqueo de 15 minutos y asigna una única mesa activa con la menor capac
 
 Las reservas temporales incluyen un `checkoutToken` opaco (HMAC-SHA256) que autoriza las operaciones de pago. No se requiere sesión de usuario interno.
 
-### POST /public/restaurants/:restaurantId/branches/:branchId/reservations/:reservationId/checkout
+### POST /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/:reservationId/checkout
 
 Crea o reutiliza una Stripe Checkout Session para pagar la reserva.
 
@@ -708,7 +724,7 @@ Crea o reutiliza una Stripe Checkout Session para pagar la reserva.
 
 **Errores:** `404 PUBLIC_PAYMENT_NOT_FOUND`, `409 RESERVATION_EXPIRED`, `409 RESERVATION_ALREADY_CONFIRMED`, `503 PAYMENT_PROVIDER_UNAVAILABLE`.
 
-### GET /public/restaurants/:restaurantId/branches/:branchId/reservations/:reservationId/payment
+### GET /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/:reservationId/payment
 
 Consulta el estado de la reserva y su último intento de pago.
 

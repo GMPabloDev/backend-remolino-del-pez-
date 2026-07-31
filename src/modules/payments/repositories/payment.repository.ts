@@ -63,8 +63,8 @@ export interface PaymentRepository {
 	// Contexto de autorización
 	findReservationForPayment(
 		reservationId: string,
-		branchId: string,
-		restaurantId: string,
+		branchSlug: string,
+		restaurantSlug: string,
 	): Promise<PaymentReservationContext | null>;
 
 	findReservationById(

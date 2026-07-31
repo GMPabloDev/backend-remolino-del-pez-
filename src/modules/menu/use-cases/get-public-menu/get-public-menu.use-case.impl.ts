@@ -79,7 +79,7 @@ export class GetPublicMenuUseCaseImpl implements GetPublicMenuUseCase {
 
 		for (const [dishId, menuDish] of configByDishId) {
 			const dish = dishById.get(dishId);
-			if (!dish) continue; // Plato inactivo o eliminado
+			if (dish?.category.status !== "ACTIVE") continue;
 
 			// Completar datos del plato
 			menuDish.name = dish.name;

@@ -209,6 +209,7 @@ Crea el restaurante (singleton).
 ```json
 {
   "id": "uuid",
+  "slug": "central",
   "name": "string",
   "legalName": "string",
   "taxId": "string",
@@ -273,6 +274,7 @@ Crea el restaurante (singleton).
 {
   "id": "uuid",
   "restaurantId": "uuid",
+  "slug": "miraflores",
   "name": "string",
   "code": "MAYÚSCULAS",
   "address": "string",
@@ -644,21 +646,79 @@ Crea o reemplaza la configuración comercial de un plato en una sucursal. Idempo
 
 ---
 
+## Descubrimiento público (sin autenticación)
+
+### GET /public/restaurants/:restaurantSlug
+
+Devuelve únicamente la información pública del restaurante.
+
+**Response 200:**
+```json
+{
+  "slug": "central",
+  "name": "Central",
+  "phone": "999888777",
+  "email": "contacto@central.pe",
+  "timezone": "America/Lima"
+}
+```
+
+No expone `legalName`, `taxId`, UUID ni timestamps.
+
+**Errores:** `404 RESTAURANT_NOT_FOUND`
+
+### GET /public/restaurants/:restaurantSlug/branches
+
+Lista las sucursales `ACTIVE` del restaurante para construir el selector público. Se ordenan por `name ASC, slug ASC`. Un restaurante sin sucursales activas devuelve `200 []`.
+
+**Response 200:**
+```json
+[
+  {
+    "restaurantSlug": "central",
+    "branchSlug": "miraflores",
+    "name": "Sucursal Miraflores",
+    "address": "Av. Larco 123",
+    "district": "Miraflores",
+    "province": "Lima",
+    "department": "Lima",
+    "phone": "999111222",
+    "email": "miraflores@central.pe",
+    "rules": {
+      "defaultReservationDurationMinutes": 60,
+      "minimumAdvanceMinutes": 60,
+      "maximumAdvanceDays": 30,
+      "arrivalToleranceMinutes": 15,
+      "maxPartySize": 8
+    },
+    "intervals": [
+      { "dayOfWeek": 1, "startTime": "12:00", "endTime": "22:00" }
+    ]
+  }
+]
+```
+
+No expone UUID, `code`, `status` ni timestamps de sucursal.
+
+**Errores:** `404 RESTAURANT_NOT_FOUND`
+
+---
+
 ## Menú público (sin autenticación)
 
 | Método | Ruta |
 |--------|------|
-| `GET` | `/public/restaurants/:rid/branches/:bid/menu` |
+| `GET` | `/public/restaurants/:restaurantSlug/branches/:branchSlug/menu` |
 
-### GET /public/restaurants/:restaurantId/branches/:branchId/menu
+### GET /public/restaurants/:restaurantSlug/branches/:branchSlug/menu
 
 Devuelve el menú publicable de una sucursal activa. Sin autenticación.
 
 **Response 200** (sucursal activa sin platos publicables):
 ```json
 {
-  "restaurantId": "uuid",
-  "branchId": "uuid",
+  "restaurantSlug": "central",
+  "branchSlug": "miraflores",
   "categories": []
 }
 ```
@@ -666,8 +726,8 @@ Devuelve el menú publicable de una sucursal activa. Sin autenticación.
 **Response 200** (con platos):
 ```json
 {
-  "restaurantId": "uuid",
-  "branchId": "uuid",
+  "restaurantSlug": "central",
+  "branchSlug": "miraflores",
   "categories": [
     {
       "id": "uuid",
@@ -703,7 +763,7 @@ Devuelve el menú publicable de una sucursal activa. Sin autenticación.
 
 No requieren autenticación.
 
-### GET /public/restaurants/:restaurantId/branches/:branchId/reservations/availability
+### GET /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/availability
 
 Consulta horarios disponibles de una sucursal.
 
@@ -728,7 +788,7 @@ La respuesta usa `America/Lima`, bloques de 15 minutos y la duración configurad
 
 No expone mesas ni cantidades disponibles. Una fecha válida sin opciones devuelve `availableTimes: []`.
 
-### POST /public/restaurants/:restaurantId/branches/:branchId/reservations/temporary
+### POST /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/temporary
 
 Crea un bloqueo temporal de 15 minutos y asigna automáticamente una mesa activa con la menor capacidad suficiente. La mesa no se expone en la respuesta.
 
@@ -781,7 +841,7 @@ Reglas:
 ```json
 {
   "id": "uuid",
-  "branchId": "uuid",
+  "branchSlug": "miraflores",
   "status": "pending_payment",
   "date": "2026-08-01",
   "startTime": "13:30",
@@ -827,7 +887,7 @@ Repetir la misma clave con el mismo payload devuelve `200` con la reserva origin
 
 Todas las rutas de pago usan el token opaco devuelto en la creación de la reserva temporal. No requieren sesión de usuario interno.
 
-### POST /public/restaurants/:rid/branches/:bid/reservations/:reservationId/checkout
+### POST /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/:reservationId/checkout
 
 Crea o reutiliza una Stripe Checkout Session. Body vacío. El importe y moneda se derivan de la reserva; Stripe recibe el total en céntimos de PEN y los line items desde los snapshots.
 
@@ -853,7 +913,7 @@ Crea o reutiliza una Stripe Checkout Session. Body vacío. El importe y moneda s
 
 ---
 
-### GET /public/restaurants/:rid/branches/:bid/reservations/:reservationId/payment
+### GET /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/:reservationId/payment
 
 Consulta el estado de la reserva y su último intento de pago. No expone URL de checkout ni identificadores de Stripe.
 

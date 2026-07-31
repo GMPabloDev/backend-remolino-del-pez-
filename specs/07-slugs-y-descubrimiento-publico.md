@@ -1,6 +1,6 @@
 # SPEC 07 — Slugs y descubrimiento público
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 01, SPEC 04, SPEC 05, SPEC 06
 > **Supersedes:** SPEC 04 (identificadores UUID del menú público), SPEC 05 (identificadores UUID de las rutas y respuestas públicas de reservas), SPEC 06 (identificadores UUID de las rutas públicas de pago)
 > **Date:** 2026-07-31

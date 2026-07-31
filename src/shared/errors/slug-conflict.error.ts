@@ -22,6 +22,10 @@ export function isSlugUniqueConstraintError(
 		if (Array.isArray(target) && target.some((field) => field === "slug")) {
 			return true;
 		}
+
+		if (typeof error.message === "string" && error.message.includes("slug")) {
+			return true;
+		}
 	}
 
 	const cause = isRecord(error.cause) ? error.cause : undefined;

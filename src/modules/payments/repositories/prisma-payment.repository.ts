@@ -31,22 +31,20 @@ export class PrismaPaymentRepository implements PaymentRepository {
 
 	async findReservationForPayment(
 		reservationId: string,
-		branchId: string,
-		restaurantId: string,
+		branchSlug: string,
+		restaurantSlug: string,
 	): Promise<PaymentReservationContext | null> {
-		if (
-			!isValidUuid(reservationId) ||
-			!isValidUuid(branchId) ||
-			!isValidUuid(restaurantId)
-		) {
+		if (!isValidUuid(reservationId) || !branchSlug || !restaurantSlug) {
 			return null;
 		}
 
 		const reservation = await prisma.reservation.findFirst({
 			where: {
 				id: reservationId,
-				branchId,
-				branch: { restaurantId },
+				branch: {
+					slug: branchSlug,
+					restaurant: { slug: restaurantSlug },
+				},
 			},
 			include: RESERVATION_INCLUDE,
 		});
