@@ -17,6 +17,7 @@ export function toAvailabilityDto(
 
 export function toTemporaryReservationDto(
 	reservation: ReservationWithItems,
+	branchSlug: string,
 	timezone: string,
 	durationMinutes: number,
 	checkoutToken: string | null = null,
@@ -26,7 +27,7 @@ export function toTemporaryReservationDto(
 
 	return {
 		id: reservation.id,
-		branchId: reservation.branchId,
+		branchSlug,
 		status: toReservationStatus(reservation.status),
 		date: start.date,
 		startTime: start.time,

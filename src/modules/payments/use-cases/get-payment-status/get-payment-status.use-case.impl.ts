@@ -8,15 +8,15 @@ export class GetPaymentStatusUseCaseImpl implements GetPaymentStatusUseCase {
 	constructor(private readonly paymentRepository: PaymentRepository) {}
 
 	async execute(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 		reservationId: string,
 		bearerToken: string,
 	) {
 		const reservation = await this.paymentRepository.findReservationForPayment(
 			reservationId,
-			branchId,
-			restaurantId,
+			branchSlug,
+			restaurantSlug,
 		);
 
 		if (!reservation?.checkoutTokenHash) {

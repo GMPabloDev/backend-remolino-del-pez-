@@ -19,13 +19,13 @@ const SERIALIZABLE_RETRY_LIMIT = 3;
 
 export class PrismaReservationRepository implements ReservationRepository {
 	async findBranchContext(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 	): Promise<ReservationBranchContext | null> {
-		if (!isValidUuid(restaurantId) || !isValidUuid(branchId)) return null;
+		if (!restaurantSlug || !branchSlug) return null;
 
 		return prisma.branch.findFirst({
-			where: { id: branchId, restaurantId },
+			where: { slug: branchSlug, restaurant: { slug: restaurantSlug } },
 			include: {
 				rules: true,
 				intervals: {

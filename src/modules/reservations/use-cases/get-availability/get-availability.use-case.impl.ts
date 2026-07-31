@@ -22,13 +22,13 @@ export class GetAvailabilityUseCaseImpl implements GetAvailabilityUseCase {
 	) {}
 
 	async execute(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 		input: GetAvailabilityQuery,
 	): Promise<AvailabilityDto> {
 		const branch = await this.reservationRepository.findBranchContext(
-			restaurantId,
-			branchId,
+			restaurantSlug,
+			branchSlug,
 		);
 
 		if (branch?.status !== "ACTIVE" || !branch.rules) {
@@ -64,7 +64,7 @@ export class GetAvailabilityUseCaseImpl implements GetAvailabilityUseCase {
 						branch.rules.defaultReservationDurationMinutes * 60 * 1000,
 				);
 				const tables = await this.reservationRepository.findAvailableTables(
-					branchId,
+					branch.id,
 					input.partySize,
 					startAt,
 					endAt,

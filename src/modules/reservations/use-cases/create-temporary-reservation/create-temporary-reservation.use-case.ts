@@ -8,8 +8,8 @@ export interface CreateTemporaryReservationResult {
 
 export interface CreateTemporaryReservationUseCase {
 	execute(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 		idempotencyKey: string,
 		input: CreateTemporaryReservationInput,
 	): Promise<CreateTemporaryReservationResult>;

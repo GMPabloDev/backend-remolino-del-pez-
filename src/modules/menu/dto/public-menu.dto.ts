@@ -21,7 +21,7 @@ export interface PublicMenuCategory {
 
 /** Respuesta completa del menú público. */
 export interface PublicMenuResponse {
-	restaurantId: string;
-	branchId: string;
+	restaurantSlug: string;
+	branchSlug: string;
 	categories: PublicMenuCategory[];
 }

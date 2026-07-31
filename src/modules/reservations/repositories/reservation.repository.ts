@@ -55,8 +55,8 @@ export interface ReservationWriteResult {
 
 export interface ReservationRepository {
 	findBranchContext(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 	): Promise<ReservationBranchContext | null>;
 	findByIdempotencyKey(
 		idempotencyKey: string,

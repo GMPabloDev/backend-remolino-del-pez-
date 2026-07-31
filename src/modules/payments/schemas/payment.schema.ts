@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { publicBranchSlugParamsSchema } from "../../../shared/slug/public-slug.schema";
 
 /** UUID de ruta — validado por el router, pero el schema sirve de contrato. */
 export const uuidParamSchema = z.string().uuid();
@@ -16,7 +17,6 @@ export const bearerTokenSchema = z
 
 /** Parámetros de ruta para checkout y consulta de pago. */
 export const paymentRouteParamsSchema = z.object({
-	restaurantId: z.string().uuid(),
-	branchId: z.string().uuid(),
-	reservationId: z.string().uuid(),
+	...publicBranchSlugParamsSchema.shape,
+	reservationId: uuidParamSchema,
 });

@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { publicBranchSlugParamsSchema } from "../../shared/slug/public-slug.schema";
+import { validatePublicParams } from "../../shared/validation/public-params-validation";
 import { validate } from "../../shared/validation/validation-hook";
 import {
 	createTemporaryReservationHeadersSchema,
@@ -8,15 +10,6 @@ import { getAvailabilitySchema } from "./schemas/get-availability.schema";
 import type { CreateTemporaryReservationUseCase } from "./use-cases/create-temporary-reservation/create-temporary-reservation.use-case";
 import type { GetAvailabilityUseCase } from "./use-cases/get-availability/get-availability.use-case";
 
-function getRouteParam(
-	c: { req: { param: (name: string) => string | undefined } },
-	name: string,
-): string {
-	const value = c.req.param(name);
-	if (!value) throw new Error(`${name} es requerido`);
-	return value;
-}
-
 export function createReservationRouter(deps: {
 	getAvailability: GetAvailabilityUseCase;
 	createTemporaryReservation: CreateTemporaryReservationUseCase;
@@ -25,14 +18,17 @@ export function createReservationRouter(deps: {
 
 	router.get(
 		"/availability",
+		validatePublicParams(
+			publicBranchSlugParamsSchema,
+			"PUBLIC_RESERVATION_NOT_FOUND",
+		),
 		validate("query", getAvailabilitySchema),
 		async (c) => {
-			const restaurantId = getRouteParam(c, "restaurantId");
-			const branchId = getRouteParam(c, "branchId");
+			const { restaurantSlug, branchSlug } = c.req.valid("param");
 			const query = c.req.valid("query");
 			const availability = await deps.getAvailability.execute(
-				restaurantId,
-				branchId,
+				restaurantSlug,
+				branchSlug,
 				query,
 			);
 			return c.json(availability);
@@ -41,16 +37,19 @@ export function createReservationRouter(deps: {
 
 	router.post(
 		"/temporary",
+		validatePublicParams(
+			publicBranchSlugParamsSchema,
+			"PUBLIC_RESERVATION_NOT_FOUND",
+		),
 		validate("header", createTemporaryReservationHeadersSchema),
 		validate("json", createTemporaryReservationSchema),
 		async (c) => {
-			const restaurantId = getRouteParam(c, "restaurantId");
-			const branchId = getRouteParam(c, "branchId");
+			const { restaurantSlug, branchSlug } = c.req.valid("param");
 			const headers = c.req.valid("header");
 			const input = c.req.valid("json");
 			const result = await deps.createTemporaryReservation.execute(
-				restaurantId,
-				branchId,
+				restaurantSlug,
+				branchSlug,
 				headers["idempotency-key"],
 				input,
 			);

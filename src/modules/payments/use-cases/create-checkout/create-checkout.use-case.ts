@@ -7,8 +7,8 @@ export interface CreateCheckoutResult {
 
 export interface CreateCheckoutUseCase {
 	execute(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 		reservationId: string,
 		bearerToken: string,
 	): Promise<CreateCheckoutResult>;

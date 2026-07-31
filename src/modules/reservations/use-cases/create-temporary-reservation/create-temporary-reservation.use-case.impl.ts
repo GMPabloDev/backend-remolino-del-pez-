@@ -35,28 +35,32 @@ export class CreateTemporaryReservationUseCaseImpl
 	) {}
 
 	async execute(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 		idempotencyKey: string,
 		input: CreateTemporaryReservationInput,
 	): Promise<CreateTemporaryReservationResult> {
 		const normalizedInput = normalizeInput(input);
+		const branch = await this.reservationRepository.findBranchContext(
+			restaurantSlug,
+			branchSlug,
+		);
+
+		if (!branch) {
+			throw new PublicReservationNotFoundException();
+		}
+
 		const requestHash = createRequestHash(
-			restaurantId,
-			branchId,
+			branch.restaurantId,
+			branch.id,
 			normalizedInput,
 		);
 		const existing =
 			await this.reservationRepository.findByIdempotencyKey(idempotencyKey);
 
 		if (existing) {
-			return this.buildReplay(existing, requestHash);
+			return this.buildReplay(existing, requestHash, branch.slug);
 		}
-
-		const branch = await this.reservationRepository.findBranchContext(
-			restaurantId,
-			branchId,
-		);
 
 		const rules = branch?.rules;
 		if (branch?.status !== "ACTIVE" || !rules) {
@@ -96,8 +100,8 @@ export class CreateTemporaryReservationUseCaseImpl
 		const dishIds = normalizedInput.items.map((item) => item.dishId);
 		const reservableDishes =
 			await this.reservationRepository.findReservableDishes(
-				restaurantId,
-				branchId,
+				branch.restaurantId,
+				branch.id,
 				dishIds,
 			);
 		const dishById = new Map(
@@ -137,7 +141,7 @@ export class CreateTemporaryReservationUseCaseImpl
 			this.checkoutTokenService.generate("placeholder").version;
 		const result = await this.reservationRepository.createTemporary(
 			{
-				branchId,
+				branchId: branch.id,
 				idempotencyKey,
 				requestHash,
 				checkoutTokenVersion: tokenVersion,
@@ -179,6 +183,7 @@ export class CreateTemporaryReservationUseCaseImpl
 		return {
 			reservation: toTemporaryReservationDto(
 				result.reservation,
+				branch.slug,
 				RESERVATION_TIMEZONE,
 				durationMinutes,
 				checkoutToken,
@@ -190,6 +195,7 @@ export class CreateTemporaryReservationUseCaseImpl
 	private buildReplay(
 		reservation: ReservationWithItems,
 		requestHash: string,
+		branchSlug: string,
 	): CreateTemporaryReservationResult {
 		if (reservation.requestHash !== requestHash) {
 			throw new IdempotencyKeyReusedException();
@@ -200,6 +206,7 @@ export class CreateTemporaryReservationUseCaseImpl
 		return {
 			reservation: toTemporaryReservationDto(
 				reservation,
+				branchSlug,
 				RESERVATION_TIMEZONE,
 				getReservationDurationMinutes(reservation.startAt, reservation.endAt),
 				checkoutToken,

@@ -1,4 +1,6 @@
 import type { MenuCategory } from "../../../../generated/prisma/client";
+import type { BranchRepository } from "../../../branches/repositories/branch.repository";
+import type { RestaurantRepository } from "../../../restaurants/repositories/restaurant.repository";
 import type {
 	PublicMenuCategory,
 	PublicMenuDish,
@@ -21,28 +23,31 @@ export class GetPublicMenuUseCaseImpl implements GetPublicMenuUseCase {
 	constructor(
 		private readonly dishRepository: DishRepository,
 		private readonly branchDishRepository: BranchDishRepository,
-		private readonly branchIsActiveAndBelongsToRestaurant: (
-			branchId: string,
-			restaurantId: string,
-		) => Promise<boolean>,
+		private readonly restaurantRepository: RestaurantRepository,
+		private readonly branchRepository: BranchRepository,
 	) {}
 
 	async execute(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 	): Promise<PublicMenuResponse> {
-		const isActive = await this.branchIsActiveAndBelongsToRestaurant(
-			branchId,
-			restaurantId,
-		);
-		if (!isActive) {
+		const restaurant =
+			await this.restaurantRepository.findBySlug(restaurantSlug);
+		const branch = restaurant
+			? await this.branchRepository.findByRestaurantIdAndSlug(
+					restaurant.id,
+					branchSlug,
+				)
+			: null;
+
+		if (!restaurant || !branch || branch.status !== "ACTIVE") {
 			throw new PublicMenuNotFoundException();
 		}
 
 		// Consultar solo platos activos y configuraciones de la sucursal en paralelo
 		const [dishes, branchDishes] = await Promise.all([
-			this.dishRepository.findByRestaurantId(restaurantId, "ACTIVE"),
-			this.branchDishRepository.findByBranchId(branchId),
+			this.dishRepository.findByRestaurantId(restaurant.id, "ACTIVE"),
+			this.branchDishRepository.findByBranchId(branch.id),
 		]);
 
 		// Índice de configuraciones publicables por dishId
@@ -112,8 +117,8 @@ export class GetPublicMenuUseCaseImpl implements GetPublicMenuUseCase {
 		);
 
 		return {
-			restaurantId,
-			branchId,
+			restaurantSlug: restaurant.slug,
+			branchSlug: branch.slug,
 			categories: result,
 		};
 	}

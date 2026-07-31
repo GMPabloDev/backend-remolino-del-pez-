@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { validatePublicParams } from "../../shared/validation/public-params-validation";
 import { PublicPaymentNotFoundException } from "./exceptions/public-payment-not-found.exception";
 import {
 	bearerTokenSchema,
@@ -13,53 +14,51 @@ export function createPaymentRouter(deps: {
 }): Hono {
 	const router = new Hono();
 
-	router.post("/reservations/:reservationId/checkout", async (c) => {
-		const params = paymentRouteParamsSchema.parse({
-			restaurantId: c.req.param("restaurantId"),
-			branchId: c.req.param("branchId"),
-			reservationId: c.req.param("reservationId"),
-		});
+	router.post(
+		"/reservations/:reservationId/checkout",
+		validatePublicParams(paymentRouteParamsSchema, "PUBLIC_PAYMENT_NOT_FOUND"),
+		async (c) => {
+			const params = c.req.valid("param");
+			const rawToken = c.req.header("Authorization");
+			const tokenResult = bearerTokenSchema.safeParse(rawToken);
 
-		const rawToken = c.req.header("Authorization");
-		const tokenResult = bearerTokenSchema.safeParse(rawToken);
+			if (!tokenResult.success) {
+				throw new PublicPaymentNotFoundException();
+			}
 
-		if (!tokenResult.success) {
-			throw new PublicPaymentNotFoundException();
-		}
+			const result = await deps.createCheckout.execute(
+				params.restaurantSlug,
+				params.branchSlug,
+				params.reservationId,
+				tokenResult.data,
+			);
 
-		const result = await deps.createCheckout.execute(
-			params.restaurantId,
-			params.branchId,
-			params.reservationId,
-			tokenResult.data,
-		);
+			return c.json(result.checkout, result.created ? 201 : 200);
+		},
+	);
 
-		return c.json(result.checkout, result.created ? 201 : 200);
-	});
+	router.get(
+		"/reservations/:reservationId/payment",
+		validatePublicParams(paymentRouteParamsSchema, "PUBLIC_PAYMENT_NOT_FOUND"),
+		async (c) => {
+			const params = c.req.valid("param");
+			const rawToken = c.req.header("Authorization");
+			const tokenResult = bearerTokenSchema.safeParse(rawToken);
 
-	router.get("/reservations/:reservationId/payment", async (c) => {
-		const params = paymentRouteParamsSchema.parse({
-			restaurantId: c.req.param("restaurantId"),
-			branchId: c.req.param("branchId"),
-			reservationId: c.req.param("reservationId"),
-		});
+			if (!tokenResult.success) {
+				throw new PublicPaymentNotFoundException();
+			}
 
-		const rawToken = c.req.header("Authorization");
-		const tokenResult = bearerTokenSchema.safeParse(rawToken);
+			const paymentStatus = await deps.getPaymentStatus.execute(
+				params.restaurantSlug,
+				params.branchSlug,
+				params.reservationId,
+				tokenResult.data,
+			);
 
-		if (!tokenResult.success) {
-			throw new PublicPaymentNotFoundException();
-		}
-
-		const paymentStatus = await deps.getPaymentStatus.execute(
-			params.restaurantId,
-			params.branchId,
-			params.reservationId,
-			tokenResult.data,
-		);
-
-		return c.json(paymentStatus);
-	});
+			return c.json(paymentStatus);
+		},
+	);
 
 	return router;
 }

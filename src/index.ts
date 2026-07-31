@@ -5,11 +5,13 @@ import { ChangePasswordUseCaseImpl } from "./modules/auth/use-cases/change-passw
 import { LoginUseCaseImpl } from "./modules/auth/use-cases/login/login.use-case.impl";
 import { LogoutUseCaseImpl } from "./modules/auth/use-cases/logout/logout.use-case.impl";
 import { RefreshSessionUseCaseImpl } from "./modules/auth/use-cases/refresh-session/refresh-session.use-case.impl";
+import { createPublicBranchRouter } from "./modules/branches/public.router";
 import { PrismaBranchRepository } from "./modules/branches/repositories/prisma-branch.repository";
 import { createBranchRouter } from "./modules/branches/router";
 import { CreateBranchUseCaseImpl } from "./modules/branches/use-cases/create-branch/create-branch.use-case.impl";
 import { GetBranchUseCaseImpl } from "./modules/branches/use-cases/get-branch/get-branch.use-case.impl";
 import { ListBranchesUseCaseImpl } from "./modules/branches/use-cases/list-branches/list-branches.use-case.impl";
+import { ListPublicBranchesUseCaseImpl } from "./modules/branches/use-cases/list-public-branches/list-public-branches.use-case.impl";
 import { ReplaceBranchScheduleUseCaseImpl } from "./modules/branches/use-cases/replace-branch-schedule/replace-branch-schedule.use-case.impl";
 import { UpdateBranchUseCaseImpl } from "./modules/branches/use-cases/update-branch/update-branch.use-case.impl";
 import { UpdateBranchStatusUseCaseImpl } from "./modules/branches/use-cases/update-branch-status/update-branch-status.use-case.impl";
@@ -45,9 +47,11 @@ import { createReservationRouter } from "./modules/reservations/router";
 import { HmacCheckoutTokenService } from "./modules/reservations/services/hmac-checkout-token.service";
 import { CreateTemporaryReservationUseCaseImpl } from "./modules/reservations/use-cases/create-temporary-reservation/create-temporary-reservation.use-case.impl";
 import { GetAvailabilityUseCaseImpl } from "./modules/reservations/use-cases/get-availability/get-availability.use-case.impl";
+import { createPublicRestaurantRouter } from "./modules/restaurants/public.router";
 import { PrismaRestaurantRepository } from "./modules/restaurants/repositories/prisma-restaurant.repository";
 import { createRestaurantRouter } from "./modules/restaurants/router";
 import { CreateRestaurantUseCaseImpl } from "./modules/restaurants/use-cases/create-restaurant/create-restaurant.use-case.impl";
+import { GetPublicRestaurantUseCaseImpl } from "./modules/restaurants/use-cases/get-public-restaurant/get-public-restaurant.use-case.impl";
 import { GetRestaurantUseCaseImpl } from "./modules/restaurants/use-cases/get-restaurant/get-restaurant.use-case.impl";
 import { UpdateRestaurantUseCaseImpl } from "./modules/restaurants/use-cases/update-restaurant/update-restaurant.use-case.impl";
 import { PrismaDiningTableRepository } from "./modules/tables/repositories/prisma-dining-table.repository";
@@ -110,21 +114,12 @@ const branchBelongsToRestaurant = async (
 	return branch !== null && branch.restaurantId === restaurantId;
 };
 
-const branchIsActiveAndBelongsToRestaurant = async (
-	branchId: string,
-	restaurantId: string,
-): Promise<boolean> => {
-	const branch = await branchRepository.findById(branchId);
-	return (
-		branch !== null &&
-		branch.restaurantId === restaurantId &&
-		branch.status === "ACTIVE"
-	);
-};
-
 // --- Casos de uso: Restaurantes ---
 const createRestaurant = new CreateRestaurantUseCaseImpl(restaurantRepository);
 const getRestaurant = new GetRestaurantUseCaseImpl(restaurantRepository);
+const getPublicRestaurant = new GetPublicRestaurantUseCaseImpl(
+	restaurantRepository,
+);
 const updateRestaurant = new UpdateRestaurantUseCaseImpl(restaurantRepository);
 
 // --- Casos de uso: Sucursales ---
@@ -135,6 +130,10 @@ const createBranch = new CreateBranchUseCaseImpl(
 const listBranches = new ListBranchesUseCaseImpl(
 	branchRepository,
 	restaurantExists,
+);
+const listPublicBranches = new ListPublicBranchesUseCaseImpl(
+	restaurantRepository,
+	branchRepository,
 );
 const getBranch = new GetBranchUseCaseImpl(branchRepository);
 const updateBranch = new UpdateBranchUseCaseImpl(branchRepository);
@@ -234,7 +233,8 @@ const upsertBranchDish = new UpsertBranchDishUseCaseImpl(
 const getPublicMenu = new GetPublicMenuUseCaseImpl(
 	dishRepository,
 	branchDishRepository,
-	branchIsActiveAndBelongsToRestaurant,
+	restaurantRepository,
+	branchRepository,
 );
 
 // --- Casos de uso: Reservas temporales ---
@@ -377,14 +377,24 @@ app.route(
 );
 
 app.route(
-	"/public/restaurants/:restaurantId/branches/:branchId/menu",
+	"/public/restaurants/:restaurantSlug",
+	createPublicRestaurantRouter({ getPublicRestaurant }),
+);
+
+app.route(
+	"/public/restaurants/:restaurantSlug/branches",
+	createPublicBranchRouter({ listPublicBranches }),
+);
+
+app.route(
+	"/public/restaurants/:restaurantSlug/branches/:branchSlug/menu",
 	createPublicMenuRouter({
 		getPublicMenu,
 	}),
 );
 
 app.route(
-	"/public/restaurants/:restaurantId/branches/:branchId/reservations",
+	"/public/restaurants/:restaurantSlug/branches/:branchSlug/reservations",
 	createReservationRouter({
 		getAvailability,
 		createTemporaryReservation,
@@ -393,7 +403,7 @@ app.route(
 
 // --- Rutas: Pagos públicos ---
 app.route(
-	"/public/restaurants/:restaurantId/branches/:branchId",
+	"/public/restaurants/:restaurantSlug/branches/:branchSlug",
 	createPaymentRouter({
 		createCheckout,
 		getPaymentStatus,

@@ -2,8 +2,8 @@ import type { PaymentStatusDto } from "../../dto/payment.dto";
 
 export interface GetPaymentStatusUseCase {
 	execute(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 		reservationId: string,
 		bearerToken: string,
 	): Promise<PaymentStatusDto>;

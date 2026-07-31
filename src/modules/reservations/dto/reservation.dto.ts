@@ -23,7 +23,7 @@ export interface AvailabilityDto {
 
 export interface TemporaryReservationDto {
 	id: string;
-	branchId: string;
+	branchSlug: string;
 	status: TemporaryReservationStatus;
 	date: string;
 	startTime: string;

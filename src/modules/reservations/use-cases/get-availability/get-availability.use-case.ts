@@ -3,8 +3,8 @@ import type { GetAvailabilityQuery } from "../../schemas/get-availability.schema
 
 export interface GetAvailabilityUseCase {
 	execute(
-		restaurantId: string,
-		branchId: string,
+		restaurantSlug: string,
+		branchSlug: string,
 		input: GetAvailabilityQuery,
 	): Promise<AvailabilityDto>;
 }
