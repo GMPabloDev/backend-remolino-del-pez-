@@ -71,6 +71,7 @@ enum PaymentWebhookStatus {
 
 model Restaurant {
   id             String         @id @default(uuid()) @db.Uuid
+  slug           String         @unique @db.VarChar(80)
   name           String
   legalName      String
   taxId          String         @unique @db.VarChar(11)
@@ -87,6 +88,7 @@ model Restaurant {
 model Branch {
   id            String                   @id @default(uuid()) @db.Uuid
   restaurantId  String                   @db.Uuid
+  slug          String                   @db.VarChar(80)
   name          String
   code          String
   address       String
@@ -107,6 +109,7 @@ model Branch {
   reservations  Reservation[]
 
   @@unique([restaurantId, code])
+  @@unique([restaurantId, slug])
   @@index([restaurantId, status])
 }
 
