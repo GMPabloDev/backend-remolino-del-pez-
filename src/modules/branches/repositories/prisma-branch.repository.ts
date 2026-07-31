@@ -1,5 +1,9 @@
 import type { BranchStatus } from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
+import {
+	isSlugUniqueConstraintError,
+	SlugConflictError,
+} from "../../../shared/errors/slug-conflict.error";
 import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
 	BranchRepository,
@@ -18,13 +22,20 @@ export class PrismaBranchRepository implements BranchRepository {
 	async create(data: CreateBranchData): Promise<BranchWithRelations> {
 		const { rules, ...branchData } = data;
 
-		return prisma.branch.create({
-			data: {
-				...branchData,
-				rules: { create: rules },
-			},
-			include: INCLUDE_RULES_AND_INTERVALS,
-		});
+		try {
+			return await prisma.branch.create({
+				data: {
+					...branchData,
+					rules: { create: rules },
+				},
+				include: INCLUDE_RULES_AND_INTERVALS,
+			});
+		} catch (error) {
+			if (isSlugUniqueConstraintError(error, "Branch_restaurantId_slug_key")) {
+				throw new SlugConflictError("branch", data.slug);
+			}
+			throw error;
+		}
 	}
 
 	async findById(id: string): Promise<BranchWithRelations | null> {
@@ -32,6 +43,20 @@ export class PrismaBranchRepository implements BranchRepository {
 
 		return prisma.branch.findUnique({
 			where: { id },
+			include: INCLUDE_RULES_AND_INTERVALS,
+		});
+	}
+
+	async findByRestaurantIdAndSlug(
+		restaurantId: string,
+		slug: string,
+	): Promise<BranchWithRelations | null> {
+		if (!isValidUuid(restaurantId)) return null;
+
+		return prisma.branch.findUnique({
+			where: {
+				restaurantId_slug: { restaurantId, slug },
+			},
 			include: INCLUDE_RULES_AND_INTERVALS,
 		});
 	}
@@ -45,6 +70,7 @@ export class PrismaBranchRepository implements BranchRepository {
 		return prisma.branch.findMany({
 			where: { restaurantId, ...(status ? { status } : {}) },
 			include: INCLUDE_RULES_AND_INTERVALS,
+			orderBy: [{ name: "asc" }, { slug: "asc" }],
 		});
 	}
 

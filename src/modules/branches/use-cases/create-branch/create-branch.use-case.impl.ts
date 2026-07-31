@@ -1,3 +1,5 @@
+import { SlugConflictError } from "../../../../shared/errors/slug-conflict.error";
+import { generateSlugCandidates } from "../../../../shared/slug/slug";
 import { RestaurantNotFoundException } from "../../../restaurants/exceptions/restaurant-not-found.exception";
 import { BranchCodeAlreadyExistsException } from "../../exceptions/branch-code-already-exists.exception";
 import type {
@@ -32,17 +34,33 @@ export class CreateBranchUseCaseImpl implements CreateBranchUseCase {
 			throw new BranchCodeAlreadyExistsException();
 		}
 
-		return this.branchRepository.create({
-			restaurantId,
-			name: input.name,
-			code: normalizedCode,
-			address: input.address,
-			district: input.district,
-			province: input.province,
-			department: input.department,
-			phone: input.phone,
-			email: input.email,
-			rules: input.rules,
-		});
+		for (const slug of generateSlugCandidates(input.name, "branch")) {
+			const existingSlug =
+				await this.branchRepository.findByRestaurantIdAndSlug(
+					restaurantId,
+					slug,
+				);
+			if (existingSlug) continue;
+
+			try {
+				return await this.branchRepository.create({
+					restaurantId,
+					slug,
+					name: input.name,
+					code: normalizedCode,
+					address: input.address,
+					district: input.district,
+					province: input.province,
+					department: input.department,
+					phone: input.phone,
+					email: input.email,
+					rules: input.rules,
+				});
+			} catch (error) {
+				if (!(error instanceof SlugConflictError)) throw error;
+			}
+		}
+
+		throw new Error("No se pudo generar un slug para la sucursal");
 	}
 }

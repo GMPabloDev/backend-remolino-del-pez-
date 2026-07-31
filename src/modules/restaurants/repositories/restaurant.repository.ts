@@ -3,11 +3,13 @@ import type { Restaurant } from "../../../generated/prisma/client";
 export interface RestaurantRepository {
 	create(data: CreateRestaurantData): Promise<Restaurant>;
 	findById(id: string): Promise<Restaurant | null>;
+	findBySlug(slug: string): Promise<Restaurant | null>;
 	update(id: string, data: UpdateRestaurantData): Promise<Restaurant>;
 	count(): Promise<number>;
 }
 
 export interface CreateRestaurantData {
+	slug: string;
 	name: string;
 	legalName: string;
 	taxId: string;

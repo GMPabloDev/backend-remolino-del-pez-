@@ -13,6 +13,10 @@ export interface BranchWithRelations extends Branch {
 export interface BranchRepository {
 	create(data: CreateBranchData): Promise<BranchWithRelations>;
 	findById(id: string): Promise<BranchWithRelations | null>;
+	findByRestaurantIdAndSlug(
+		restaurantId: string,
+		slug: string,
+	): Promise<BranchWithRelations | null>;
 	findByRestaurantId(
 		restaurantId: string,
 		status?: BranchStatus,
@@ -37,6 +41,7 @@ export interface CreateIntervalData {
 
 export interface CreateBranchData {
 	restaurantId: string;
+	slug: string;
 	name: string;
 	code: string;
 	address: string;
