@@ -84,7 +84,7 @@ const corsOrigins = env.CORS_ORIGINS.split(",")
 app.use(
 	"*",
 	cors({
-		origin: corsOrigins,
+		origin: "*",
 		allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization"],
 		maxAge: 600,
