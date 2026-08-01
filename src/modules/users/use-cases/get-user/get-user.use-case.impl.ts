@@ -1,4 +1,5 @@
-import type { SafeUser } from "../../dto/safe-user.dto";
+import type { SafeUser } from "../../../../shared/users/safe-user.dto";
+import { toSafeUser } from "../../../../shared/users/user.mapper";
 import { UserNotFoundException } from "../../exceptions/user-not-found.exception";
 import type { UserRepository } from "../../repositories/user.repository";
 import type { GetUserUseCase } from "./get-user.use-case";
@@ -13,7 +14,6 @@ export class GetUserUseCaseImpl implements GetUserUseCase {
 			throw new UserNotFoundException();
 		}
 
-		const { passwordHash: _, ...safeUser } = user;
-		return safeUser as SafeUser;
+		return toSafeUser(user);
 	}
 }

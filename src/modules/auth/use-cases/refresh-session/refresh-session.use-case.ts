@@ -1,9 +1,9 @@
-import type { User } from "../../../../generated/prisma/client";
+import type { SafeUser } from "../../../../shared/users/safe-user.dto";
 
 export interface RefreshSessionResult {
 	accessToken: string;
 	refreshToken: string;
-	user: Omit<User, "passwordHash">;
+	user: SafeUser;
 }
 
 export interface RefreshSessionUseCase {

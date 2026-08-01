@@ -1,6 +1,7 @@
 import { env } from "../../../../shared/config/env";
 import type { PasswordService } from "../../../../shared/security/password.service";
 import type { TokenService } from "../../../../shared/security/token.service";
+import { toSafeUser } from "../../../../shared/users/user.mapper";
 import { InvalidCredentialsException } from "../../exceptions/invalid-credentials.exception";
 import type { AuthRepository } from "../../repositories/auth.repository";
 import type { LoginResult, LoginUseCase } from "./login.use-case";
@@ -53,7 +54,7 @@ export class LoginUseCaseImpl implements LoginUseCase {
 			sid: session.id,
 		});
 
-		const { passwordHash: _, ...safeUser } = user;
+		const safeUser = toSafeUser(user);
 
 		return {
 			accessToken,

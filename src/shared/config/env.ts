@@ -13,6 +13,7 @@ const envSchema = z.object({
 	STRIPE_WEBHOOK_SECRET: z.string().min(1),
 	STRIPE_CHECKOUT_SUCCESS_URL: z.string().url(),
 	STRIPE_CHECKOUT_CANCEL_URL: z.string().url(),
+	CORS_ORIGINS: z.string().optional().default("http://localhost:4321"),
 });
 
 export type Env = z.infer<typeof envSchema>;

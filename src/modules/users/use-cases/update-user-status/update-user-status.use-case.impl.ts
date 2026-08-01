@@ -1,15 +1,13 @@
-import type { UserStatus } from "../../../../generated/prisma/client";
-import type { SafeUser } from "../../dto/safe-user.dto";
+import type { SafeUser } from "../../../../shared/users/safe-user.dto";
+import {
+	fromUserStatus,
+	toSafeUser,
+} from "../../../../shared/users/user.mapper";
 import { LastAdminRequiredException } from "../../exceptions/last-admin-required.exception";
 import { UserNotFoundException } from "../../exceptions/user-not-found.exception";
 import type { UserRepository } from "../../repositories/user.repository";
 import type { UpdateUserStatusInput } from "../../schemas/update-user-status.schema";
 import type { UpdateUserStatusUseCase } from "./update-user-status.use-case";
-
-const STATUS_MAP: Record<string, UserStatus> = {
-	active: "ACTIVE",
-	inactive: "INACTIVE",
-};
 
 export class UpdateUserStatusUseCaseImpl implements UpdateUserStatusUseCase {
 	constructor(private readonly userRepository: UserRepository) {}
@@ -23,7 +21,7 @@ export class UpdateUserStatusUseCaseImpl implements UpdateUserStatusUseCase {
 			throw new UserNotFoundException();
 		}
 
-		const newStatus = STATUS_MAP[input.status];
+		const newStatus = fromUserStatus(input.status);
 
 		// Proteger al último admin activo
 		if (
@@ -44,7 +42,6 @@ export class UpdateUserStatusUseCaseImpl implements UpdateUserStatusUseCase {
 
 		const updated = await this.userRepository.updateStatus(userId, newStatus);
 
-		const { passwordHash: _, ...safeUser } = updated;
-		return safeUser as SafeUser;
+		return toSafeUser(updated);
 	}
 }

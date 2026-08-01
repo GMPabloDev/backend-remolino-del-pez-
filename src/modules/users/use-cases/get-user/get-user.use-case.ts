@@ -1,4 +1,4 @@
-import type { SafeUser } from "../../dto/safe-user.dto";
+import type { SafeUser } from "../../../../shared/users/safe-user.dto";
 
 export interface GetUserUseCase {
 	execute(userId: string): Promise<SafeUser>;

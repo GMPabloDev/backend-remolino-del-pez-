@@ -1,5 +1,6 @@
 import type { UserRole } from "../../../../generated/prisma/client";
-import type { SafeUser } from "../../dto/safe-user.dto";
+import type { SafeUser } from "../../../../shared/users/safe-user.dto";
+import { fromUserRole, toSafeUser } from "../../../../shared/users/user.mapper";
 import { InvalidRoleBranchException } from "../../exceptions/invalid-role-branch.exception";
 import { LastAdminRequiredException } from "../../exceptions/last-admin-required.exception";
 import { UserEmailAlreadyExistsException } from "../../exceptions/user-email-already-exists.exception";
@@ -7,12 +8,6 @@ import { UserNotFoundException } from "../../exceptions/user-not-found.exception
 import type { UserRepository } from "../../repositories/user.repository";
 import type { UpdateUserInput } from "../../schemas/update-user.schema";
 import type { UpdateUserUseCase } from "./update-user.use-case";
-
-const ROLE_MAP: Record<string, UserRole> = {
-	admin: "ADMIN",
-	manager: "MANAGER",
-	branch_admin: "BRANCH_ADMIN",
-};
 
 export class UpdateUserUseCaseImpl implements UpdateUserUseCase {
 	constructor(
@@ -26,7 +21,7 @@ export class UpdateUserUseCaseImpl implements UpdateUserUseCase {
 			throw new UserNotFoundException();
 		}
 
-		const newRole = input.role ? ROLE_MAP[input.role] : undefined;
+		const newRole = input.role ? fromUserRole(input.role) : undefined;
 		const effectiveRole = newRole ?? user.role;
 
 		// Validar que no se degrade/desactive al último admin
@@ -60,8 +55,7 @@ export class UpdateUserUseCaseImpl implements UpdateUserUseCase {
 
 		const updated = await this.userRepository.update(userId, updateData);
 
-		const { passwordHash: _, ...safeUser } = updated;
-		return safeUser as SafeUser;
+		return toSafeUser(updated);
 	}
 
 	private wouldRemoveLastAdmin(

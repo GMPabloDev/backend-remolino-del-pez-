@@ -1,4 +1,4 @@
-import type { SafeUser } from "../../dto/safe-user.dto";
+import type { SafeUser } from "../../../../shared/users/safe-user.dto";
 import type { UpdateUserInput } from "../../schemas/update-user.schema";
 
 export interface UpdateUserUseCase {

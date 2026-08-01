@@ -1,5 +1,6 @@
 import type { PasswordService } from "../../../../shared/security/password.service";
-import type { SafeUser } from "../../dto/safe-user.dto";
+import type { SafeUser } from "../../../../shared/users/safe-user.dto";
+import { toSafeUser } from "../../../../shared/users/user.mapper";
 import { UserNotFoundException } from "../../exceptions/user-not-found.exception";
 import type { UserRepository } from "../../repositories/user.repository";
 import type { ResetUserPasswordInput } from "../../schemas/reset-user-password.schema";
@@ -28,7 +29,6 @@ export class ResetUserPasswordUseCaseImpl implements ResetUserPasswordUseCase {
 			this.userRepository.revokeAllSessions(userId),
 		]);
 
-		const { passwordHash: _, ...safeUser } = updated;
-		return safeUser as SafeUser;
+		return toSafeUser(updated);
 	}
 }

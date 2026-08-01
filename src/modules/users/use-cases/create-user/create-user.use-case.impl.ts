@@ -1,17 +1,11 @@
-import type { UserRole } from "../../../../generated/prisma/client";
 import type { PasswordService } from "../../../../shared/security/password.service";
-import type { SafeUser } from "../../dto/safe-user.dto";
+import type { SafeUser } from "../../../../shared/users/safe-user.dto";
+import { fromUserRole, toSafeUser } from "../../../../shared/users/user.mapper";
 import { InvalidRoleBranchException } from "../../exceptions/invalid-role-branch.exception";
 import { UserEmailAlreadyExistsException } from "../../exceptions/user-email-already-exists.exception";
 import type { UserRepository } from "../../repositories/user.repository";
 import type { CreateUserInput } from "../../schemas/create-user.schema";
 import type { CreateUserUseCase } from "./create-user.use-case";
-
-const ROLE_MAP: Record<string, UserRole> = {
-	admin: "ADMIN",
-	manager: "MANAGER",
-	branch_admin: "BRANCH_ADMIN",
-};
 
 export class CreateUserUseCaseImpl implements CreateUserUseCase {
 	constructor(
@@ -28,7 +22,7 @@ export class CreateUserUseCaseImpl implements CreateUserUseCase {
 			throw new UserEmailAlreadyExistsException();
 		}
 
-		const role = ROLE_MAP[input.role];
+		const role = fromUserRole(input.role);
 
 		// Validar relación rol-sucursal
 		if (role === "BRANCH_ADMIN") {
@@ -60,7 +54,6 @@ export class CreateUserUseCaseImpl implements CreateUserUseCase {
 			branchId: input.branchId ?? null,
 		});
 
-		const { passwordHash: _, ...safeUser } = user;
-		return safeUser as SafeUser;
+		return toSafeUser(user);
 	}
 }

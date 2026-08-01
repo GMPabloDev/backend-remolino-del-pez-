@@ -1,5 +1,6 @@
 import { env } from "../../../../shared/config/env";
 import type { TokenService } from "../../../../shared/security/token.service";
+import { toSafeUser } from "../../../../shared/users/user.mapper";
 import { InvalidRefreshTokenException } from "../../exceptions/invalid-refresh-token.exception";
 import type { AuthRepository } from "../../repositories/auth.repository";
 import type {
@@ -61,7 +62,7 @@ export class RefreshSessionUseCaseImpl implements RefreshSessionUseCase {
 			throw new InvalidRefreshTokenException();
 		}
 
-		const { passwordHash: _, ...safeUser } = user;
+		const safeUser = toSafeUser(user);
 
 		return {
 			accessToken,

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { PrismaAuthRepository } from "./modules/auth/repositories/prisma-auth.repository";
 import { createAuthRouter } from "./modules/auth/router";
 import { ChangePasswordUseCaseImpl } from "./modules/auth/use-cases/change-password/change-password.use-case.impl";
@@ -75,6 +76,21 @@ import { BunPasswordService } from "./shared/security/bun-password.service";
 import { JwtTokenService } from "./shared/security/jwt-token.service";
 
 const app = new Hono();
+
+const corsOrigins = env.CORS_ORIGINS.split(",")
+	.map((origin) => origin.trim())
+	.filter(Boolean);
+
+app.use(
+	"*",
+	cors({
+		origin: corsOrigins,
+		allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH", "OPTIONS"],
+		allowHeaders: ["Content-Type", "Authorization"],
+		maxAge: 600,
+		credentials: true,
+	}),
+);
 
 app.onError(errorHandler);
 
