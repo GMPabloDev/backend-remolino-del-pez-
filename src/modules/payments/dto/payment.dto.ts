@@ -19,7 +19,7 @@ export interface CheckoutDto {
 	status: CheckoutAttemptStatus;
 	checkoutUrl: string;
 	reservationExpiresAt: string;
-	checkoutExpiresAt: string;
+	checkoutExpiresAt: string | null;
 	currency: string;
 	total: string;
 }

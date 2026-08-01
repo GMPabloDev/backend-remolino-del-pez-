@@ -1,4 +1,4 @@
-import type { BranchWithRelations } from "../../repositories/branch.repository";
+import type { BranchDto } from "../../dto/branch.dto";
 import type { UpdateBranchInput } from "../../schemas/update-branch.schema";
 
 export interface UpdateBranchUseCase {
@@ -6,5 +6,5 @@ export interface UpdateBranchUseCase {
 		restaurantId: string,
 		branchId: string,
 		input: UpdateBranchInput,
-	): Promise<BranchWithRelations>;
+	): Promise<BranchDto>;
 }

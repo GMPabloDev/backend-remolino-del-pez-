@@ -1,4 +1,4 @@
-import type { BranchWithRelations } from "../../repositories/branch.repository";
+import type { BranchDto } from "../../dto/branch.dto";
 import type { ReplaceScheduleInput } from "../../schemas/replace-schedule.schema";
 
 export interface ReplaceBranchScheduleUseCase {
@@ -6,5 +6,5 @@ export interface ReplaceBranchScheduleUseCase {
 		restaurantId: string,
 		branchId: string,
 		input: ReplaceScheduleInput,
-	): Promise<BranchWithRelations>;
+	): Promise<BranchDto>;
 }

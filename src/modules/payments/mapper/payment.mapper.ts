@@ -48,7 +48,7 @@ export function toCheckoutDto(
 		status: toPaymentAttemptStatusDto(attempt.status),
 		checkoutUrl,
 		reservationExpiresAt: reservation.expiresAt.toISOString(),
-		checkoutExpiresAt: attempt.providerExpiresAt?.toISOString() ?? "",
+		checkoutExpiresAt: attempt.providerExpiresAt?.toISOString() ?? null,
 		currency: attempt.currency,
 		total: attempt.amount.toFixed(2),
 	};

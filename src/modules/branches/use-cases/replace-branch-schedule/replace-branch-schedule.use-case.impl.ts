@@ -1,8 +1,9 @@
+import type { BranchDto } from "../../dto/branch.dto";
 import { BranchNotFoundException } from "../../exceptions/branch-not-found.exception";
 import { BranchScheduleConflictException } from "../../exceptions/branch-schedule-conflict.exception";
+import { toBranchDto } from "../../mapper/branch.mapper";
 import type {
 	BranchRepository,
-	BranchWithRelations,
 	CreateIntervalData,
 } from "../../repositories/branch.repository";
 import type { ReplaceScheduleInput } from "../../schemas/replace-schedule.schema";
@@ -44,7 +45,7 @@ export class ReplaceBranchScheduleUseCaseImpl
 		restaurantId: string,
 		branchId: string,
 		input: ReplaceScheduleInput,
-	): Promise<BranchWithRelations> {
+	): Promise<BranchDto> {
 		const branch = await this.branchRepository.findById(branchId);
 
 		if (!branch || branch.restaurantId !== restaurantId) {
@@ -61,6 +62,8 @@ export class ReplaceBranchScheduleUseCaseImpl
 			throw new BranchScheduleConflictException();
 		}
 
-		return this.branchRepository.replaceIntervals(branchId, intervals);
+		return toBranchDto(
+			await this.branchRepository.replaceIntervals(branchId, intervals),
+		);
 	}
 }

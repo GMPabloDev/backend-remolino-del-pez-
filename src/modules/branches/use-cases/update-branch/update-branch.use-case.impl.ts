@@ -1,8 +1,9 @@
+import type { BranchDto } from "../../dto/branch.dto";
 import { BranchCodeAlreadyExistsException } from "../../exceptions/branch-code-already-exists.exception";
 import { BranchNotFoundException } from "../../exceptions/branch-not-found.exception";
+import { toBranchDto } from "../../mapper/branch.mapper";
 import type {
 	BranchRepository,
-	BranchWithRelations,
 	UpdateBranchData,
 } from "../../repositories/branch.repository";
 import type { UpdateBranchInput } from "../../schemas/update-branch.schema";
@@ -15,7 +16,7 @@ export class UpdateBranchUseCaseImpl implements UpdateBranchUseCase {
 		restaurantId: string,
 		branchId: string,
 		input: UpdateBranchInput,
-	): Promise<BranchWithRelations> {
+	): Promise<BranchDto> {
 		const branch = await this.branchRepository.findById(branchId);
 
 		if (!branch || branch.restaurantId !== restaurantId) {
@@ -54,6 +55,8 @@ export class UpdateBranchUseCaseImpl implements UpdateBranchUseCase {
 			updateData.rules = input.rules;
 		}
 
-		return this.branchRepository.update(branchId, updateData);
+		return toBranchDto(
+			await this.branchRepository.update(branchId, updateData),
+		);
 	}
 }

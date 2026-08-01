@@ -1,11 +1,10 @@
 import { SlugConflictError } from "../../../../shared/errors/slug-conflict.error";
 import { generateSlugCandidates } from "../../../../shared/slug/slug";
 import { RestaurantNotFoundException } from "../../../restaurants/exceptions/restaurant-not-found.exception";
+import type { BranchDto } from "../../dto/branch.dto";
 import { BranchCodeAlreadyExistsException } from "../../exceptions/branch-code-already-exists.exception";
-import type {
-	BranchRepository,
-	BranchWithRelations,
-} from "../../repositories/branch.repository";
+import { toBranchDto } from "../../mapper/branch.mapper";
+import type { BranchRepository } from "../../repositories/branch.repository";
 import type { CreateBranchInput } from "../../schemas/create-branch.schema";
 import type { CreateBranchUseCase } from "./create-branch.use-case";
 
@@ -18,7 +17,7 @@ export class CreateBranchUseCaseImpl implements CreateBranchUseCase {
 	async execute(
 		restaurantId: string,
 		input: CreateBranchInput,
-	): Promise<BranchWithRelations> {
+	): Promise<BranchDto> {
 		const exists = await this.restaurantExists(restaurantId);
 		if (!exists) {
 			throw new RestaurantNotFoundException();
@@ -43,19 +42,21 @@ export class CreateBranchUseCaseImpl implements CreateBranchUseCase {
 			if (existingSlug) continue;
 
 			try {
-				return await this.branchRepository.create({
-					restaurantId,
-					slug,
-					name: input.name,
-					code: normalizedCode,
-					address: input.address,
-					district: input.district,
-					province: input.province,
-					department: input.department,
-					phone: input.phone,
-					email: input.email,
-					rules: input.rules,
-				});
+				return toBranchDto(
+					await this.branchRepository.create({
+						restaurantId,
+						slug,
+						name: input.name,
+						code: normalizedCode,
+						address: input.address,
+						district: input.district,
+						province: input.province,
+						department: input.department,
+						phone: input.phone,
+						email: input.email,
+						rules: input.rules,
+					}),
+				);
 			} catch (error) {
 				if (!(error instanceof SlugConflictError)) throw error;
 			}

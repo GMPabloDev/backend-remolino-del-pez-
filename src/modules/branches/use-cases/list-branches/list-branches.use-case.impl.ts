@@ -1,9 +1,8 @@
 import type { BranchStatus } from "../../../../generated/prisma/client";
 import { RestaurantNotFoundException } from "../../../restaurants/exceptions/restaurant-not-found.exception";
-import type {
-	BranchRepository,
-	BranchWithRelations,
-} from "../../repositories/branch.repository";
+import type { BranchDto } from "../../dto/branch.dto";
+import { toBranchDto } from "../../mapper/branch.mapper";
+import type { BranchRepository } from "../../repositories/branch.repository";
 import type { ListBranchesUseCase } from "./list-branches.use-case";
 
 export class ListBranchesUseCaseImpl implements ListBranchesUseCase {
@@ -16,7 +15,7 @@ export class ListBranchesUseCaseImpl implements ListBranchesUseCase {
 		restaurantId: string,
 		status?: BranchStatus,
 		assignedBranchId?: string,
-	): Promise<BranchWithRelations[]> {
+	): Promise<BranchDto[]> {
 		const exists = await this.restaurantExists(restaurantId);
 		if (!exists) {
 			throw new RestaurantNotFoundException();
@@ -28,10 +27,10 @@ export class ListBranchesUseCaseImpl implements ListBranchesUseCase {
 		);
 
 		// BRANCH_ADMIN solo ve su sucursal asignada
-		if (assignedBranchId) {
-			return branches.filter((b) => b.id === assignedBranchId);
-		}
+		const visible = assignedBranchId
+			? branches.filter((b) => b.id === assignedBranchId)
+			: branches;
 
-		return branches;
+		return visible.map(toBranchDto);
 	}
 }

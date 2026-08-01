@@ -1,10 +1,9 @@
 import type { BranchStatus } from "../../../../generated/prisma/client";
+import type { BranchDto } from "../../dto/branch.dto";
 import { BranchNotFoundException } from "../../exceptions/branch-not-found.exception";
 import { BranchScheduleRequiredException } from "../../exceptions/branch-schedule-required.exception";
-import type {
-	BranchRepository,
-	BranchWithRelations,
-} from "../../repositories/branch.repository";
+import { toBranchDto } from "../../mapper/branch.mapper";
+import type { BranchRepository } from "../../repositories/branch.repository";
 import type { UpdateBranchStatusUseCase } from "./update-branch-status.use-case";
 
 export class UpdateBranchStatusUseCaseImpl
@@ -16,7 +15,7 @@ export class UpdateBranchStatusUseCaseImpl
 		restaurantId: string,
 		branchId: string,
 		status: BranchStatus,
-	): Promise<BranchWithRelations> {
+	): Promise<BranchDto> {
 		const branch = await this.branchRepository.findById(branchId);
 
 		if (!branch || branch.restaurantId !== restaurantId) {
@@ -28,6 +27,8 @@ export class UpdateBranchStatusUseCaseImpl
 			throw new BranchScheduleRequiredException();
 		}
 
-		return this.branchRepository.updateStatus(branchId, status);
+		return toBranchDto(
+			await this.branchRepository.updateStatus(branchId, status),
+		);
 	}
 }
