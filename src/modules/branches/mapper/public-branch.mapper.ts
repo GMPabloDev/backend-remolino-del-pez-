@@ -7,10 +7,6 @@ export function toPublicBranchDto(
 	branch: BranchWithRelations,
 	restaurantSlug: string,
 ): PublicBranchDto {
-	if (!branch.rules) {
-		throw new Error("La sucursal activa no tiene reglas de reserva");
-	}
-
 	return {
 		restaurantSlug,
 		branchSlug: branch.slug,

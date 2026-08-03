@@ -1,4 +1,7 @@
 import {
+	type Branch,
+	type BranchRules,
+	type BranchScheduleInterval,
 	type DiningTable,
 	Prisma,
 	ReservationStatus,
@@ -17,6 +20,21 @@ import type {
 const RESERVATION_INCLUDE = { items: true } as const;
 const SERIALIZABLE_RETRY_LIMIT = 3;
 
+type PrismaBranchContext = Branch & {
+	rules: BranchRules | null;
+	intervals: BranchScheduleInterval[];
+};
+
+/**
+ * La API garantiza que toda sucursal tiene reglas (obligatorias al crear y no
+ * nullables por update), así que el tipo de dominio es no-nullable.
+ */
+function toBranchContext(
+	branch: PrismaBranchContext,
+): ReservationBranchContext {
+	return branch as ReservationBranchContext;
+}
+
 export class PrismaReservationRepository implements ReservationRepository {
 	async findBranchContext(
 		restaurantSlug: string,
@@ -24,7 +42,7 @@ export class PrismaReservationRepository implements ReservationRepository {
 	): Promise<ReservationBranchContext | null> {
 		if (!restaurantSlug || !branchSlug) return null;
 
-		return prisma.branch.findFirst({
+		const branch = await prisma.branch.findFirst({
 			where: { slug: branchSlug, restaurant: { slug: restaurantSlug } },
 			include: {
 				rules: true,
@@ -33,6 +51,7 @@ export class PrismaReservationRepository implements ReservationRepository {
 				},
 			},
 		});
+		return branch ? toBranchContext(branch) : null;
 	}
 
 	async findByIdempotencyKey(

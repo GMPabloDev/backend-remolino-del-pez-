@@ -9,7 +9,7 @@ import type {
 } from "../../../generated/prisma/client";
 
 export type ReservationBranchContext = Branch & {
-	rules: BranchRules | null;
+	rules: BranchRules;
 	intervals: BranchScheduleInterval[];
 };
 

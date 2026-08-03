@@ -23,6 +23,6 @@ export interface BranchDto {
 	status: "active" | "inactive";
 	createdAt: string;
 	updatedAt: string;
-	rules: BranchRules | null;
+	rules: BranchRules;
 	intervals: BranchScheduleIntervalDto[];
 }

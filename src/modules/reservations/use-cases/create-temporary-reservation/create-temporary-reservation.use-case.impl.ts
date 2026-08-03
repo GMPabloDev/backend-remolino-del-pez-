@@ -62,8 +62,8 @@ export class CreateTemporaryReservationUseCaseImpl
 			return this.buildReplay(existing, requestHash, branch.slug);
 		}
 
-		const rules = branch?.rules;
-		if (branch?.status !== "ACTIVE" || !rules) {
+		const rules = branch.rules;
+		if (branch.status !== "ACTIVE") {
 			throw new PublicReservationNotFoundException();
 		}
 

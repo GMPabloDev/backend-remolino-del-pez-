@@ -31,7 +31,7 @@ export class GetAvailabilityUseCaseImpl implements GetAvailabilityUseCase {
 			branchSlug,
 		);
 
-		if (branch?.status !== "ACTIVE" || !branch.rules) {
+		if (branch?.status !== "ACTIVE") {
 			throw new PublicReservationNotFoundException();
 		}
 

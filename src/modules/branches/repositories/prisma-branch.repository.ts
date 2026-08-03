@@ -1,4 +1,9 @@
-import type { BranchStatus } from "../../../generated/prisma/client";
+import type {
+	Branch,
+	BranchRules,
+	BranchScheduleInterval,
+	BranchStatus,
+} from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
 import {
 	isSlugUniqueConstraintError,
@@ -18,18 +23,35 @@ const INCLUDE_RULES_AND_INTERVALS = {
 	intervals: { orderBy: { dayOfWeek: "asc" as const } },
 } as const;
 
+type PrismaBranchWithRelations = Branch & {
+	rules: BranchRules | null;
+	intervals: BranchScheduleInterval[];
+};
+
+/**
+ * La API garantiza que toda sucursal tiene reglas (obligatorias al crear y no
+ * nullables por update), así que el tipo de dominio es no-nullable.
+ */
+function toBranchWithRelations(
+	branch: PrismaBranchWithRelations,
+): BranchWithRelations {
+	return branch as BranchWithRelations;
+}
+
 export class PrismaBranchRepository implements BranchRepository {
 	async create(data: CreateBranchData): Promise<BranchWithRelations> {
 		const { rules, ...branchData } = data;
 
 		try {
-			return await prisma.branch.create({
-				data: {
-					...branchData,
-					rules: { create: rules },
-				},
-				include: INCLUDE_RULES_AND_INTERVALS,
-			});
+			return toBranchWithRelations(
+				await prisma.branch.create({
+					data: {
+						...branchData,
+						rules: { create: rules },
+					},
+					include: INCLUDE_RULES_AND_INTERVALS,
+				}),
+			);
 		} catch (error) {
 			if (isSlugUniqueConstraintError(error, "Branch_restaurantId_slug_key")) {
 				throw new SlugConflictError("branch", data.slug);
@@ -41,10 +63,11 @@ export class PrismaBranchRepository implements BranchRepository {
 	async findById(id: string): Promise<BranchWithRelations | null> {
 		if (!isValidUuid(id)) return null;
 
-		return prisma.branch.findUnique({
+		const branch = await prisma.branch.findUnique({
 			where: { id },
 			include: INCLUDE_RULES_AND_INTERVALS,
 		});
+		return branch ? toBranchWithRelations(branch) : null;
 	}
 
 	async findByRestaurantIdAndSlug(
@@ -53,12 +76,13 @@ export class PrismaBranchRepository implements BranchRepository {
 	): Promise<BranchWithRelations | null> {
 		if (!isValidUuid(restaurantId)) return null;
 
-		return prisma.branch.findUnique({
+		const branch = await prisma.branch.findUnique({
 			where: {
 				restaurantId_slug: { restaurantId, slug },
 			},
 			include: INCLUDE_RULES_AND_INTERVALS,
 		});
+		return branch ? toBranchWithRelations(branch) : null;
 	}
 
 	async findByRestaurantId(
@@ -67,11 +91,12 @@ export class PrismaBranchRepository implements BranchRepository {
 	): Promise<BranchWithRelations[]> {
 		if (!isValidUuid(restaurantId)) return [];
 
-		return prisma.branch.findMany({
+		const branches = await prisma.branch.findMany({
 			where: { restaurantId, ...(status ? { status } : {}) },
 			include: INCLUDE_RULES_AND_INTERVALS,
 			orderBy: [{ name: "asc" }, { slug: "asc" }],
 		});
+		return branches.map(toBranchWithRelations);
 	}
 
 	async update(
@@ -80,14 +105,16 @@ export class PrismaBranchRepository implements BranchRepository {
 	): Promise<BranchWithRelations> {
 		const { rules, ...branchData } = data;
 
-		return prisma.branch.update({
-			where: { id },
-			data: {
-				...branchData,
-				...(rules ? { rules: { update: rules } } : {}),
-			},
-			include: INCLUDE_RULES_AND_INTERVALS,
-		});
+		return toBranchWithRelations(
+			await prisma.branch.update({
+				where: { id },
+				data: {
+					...branchData,
+					...(rules ? { rules: { update: rules } } : {}),
+				},
+				include: INCLUDE_RULES_AND_INTERVALS,
+			}),
+		);
 	}
 
 	async countByRestaurantAndCode(
@@ -113,10 +140,12 @@ export class PrismaBranchRepository implements BranchRepository {
 				});
 			}
 
-			return tx.branch.findUniqueOrThrow({
-				where: { id: branchId },
-				include: INCLUDE_RULES_AND_INTERVALS,
-			});
+			return toBranchWithRelations(
+				await tx.branch.findUniqueOrThrow({
+					where: { id: branchId },
+					include: INCLUDE_RULES_AND_INTERVALS,
+				}),
+			);
 		});
 	}
 
@@ -124,10 +153,12 @@ export class PrismaBranchRepository implements BranchRepository {
 		branchId: string,
 		status: BranchStatus,
 	): Promise<BranchWithRelations> {
-		return prisma.branch.update({
-			where: { id: branchId },
-			data: { status },
-			include: INCLUDE_RULES_AND_INTERVALS,
-		});
+		return toBranchWithRelations(
+			await prisma.branch.update({
+				where: { id: branchId },
+				data: { status },
+				include: INCLUDE_RULES_AND_INTERVALS,
+			}),
+		);
 	}
 }

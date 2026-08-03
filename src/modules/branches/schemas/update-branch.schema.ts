@@ -16,7 +16,7 @@ export const updateBranchSchema = z.object({
 	province: z.string().min(1).optional(),
 	department: z.string().min(1).optional(),
 	phone: z.string().min(1).optional(),
-	email: z.string().email().optional(),
+	email: z.string().email().nullable().optional(),
 	rules: updateRulesSchema.optional(),
 });
 

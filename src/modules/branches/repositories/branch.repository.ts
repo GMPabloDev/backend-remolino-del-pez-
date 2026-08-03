@@ -5,8 +5,13 @@ import type {
 	BranchStatus,
 } from "../../../generated/prisma/client";
 
+/**
+ * Sucursal con sus relaciones cargadas. `rules` siempre está presente: la
+ * API exige reglas al crear y no permite nullarlas, por lo que el tipo es
+ * no-nullable aunque la BD lo permita.
+ */
 export interface BranchWithRelations extends Branch {
-	rules: BranchRules | null;
+	rules: BranchRules;
 	intervals: BranchScheduleInterval[];
 }
 
@@ -69,6 +74,6 @@ export interface UpdateBranchData {
 	province?: string;
 	department?: string;
 	phone?: string;
-	email?: string;
+	email?: string | null;
 	rules?: Partial<CreateBranchRulesData>;
 }

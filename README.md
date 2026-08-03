@@ -85,8 +85,8 @@ Authorization: Bearer <accessToken>
     "fullName": "Administrador",
     "email": "admin@example.com",
     "phone": null,
-    "role": "ADMIN",
-    "status": "ACTIVE",
+    "role": "admin",
+    "status": "active",
     "branchId": null,
     "createdAt": "...",
     "updatedAt": "..."
@@ -138,7 +138,7 @@ Requiere autenticación. Revoca todas las sesiones del usuario, incluida la actu
 
 ---
 
-## Usuarios (solo `ADMIN`)
+## Usuarios (solo `admin`)
 
 ### POST /users
 
@@ -187,7 +187,7 @@ Todos los campos son opcionales. Mismo formato que `POST`.
 ```
 
 - Desactivar revoca todas las sesiones del usuario.
-- No se puede desactivar al último `ADMIN` activo.
+- No se puede desactivar al último `admin` activo.
 
 **Errores:** `404 USER_NOT_FOUND`, `422 LAST_ADMIN_REQUIRED`
 
@@ -295,7 +295,7 @@ Todos los campos opcionales. Mismo formato que `POST`.
 - `code` se normaliza a mayúsculas.
 - La sucursal se crea en estado `inactive`.
 
-**Response 201:** sucursal con `id`, `restaurantId`, `slug`, `status: "INACTIVE"`, `rules` y `intervals: []`.
+**Response 201:** sucursal con `id`, `restaurantId`, `slug`, `status: "inactive"`, `rules` y `intervals: []`.
 
 **Errores:** `400`, `401`, `403`, `404 RESTAURANT_NOT_FOUND`, `409 BRANCH_CODE_ALREADY_EXISTS`
 
@@ -316,7 +316,7 @@ Todos los campos opcionales. Mismo formato que `POST`.
 
 ### PATCH /restaurants/:restaurantId/branches/:branchId
 
-Todos los campos opcionales, incluyendo `rules` (parcial).
+Todos los campos opcionales, incluyendo `rules` (parcial). `email: null` elimina el email de la sucursal.
 
 ```json
 {
@@ -544,7 +544,7 @@ No requiere autenticación. Devuelve `slug`, `name`, `phone`, `email` y `timezon
 
 ### GET /public/restaurants/:restaurantSlug/branches
 
-No requiere autenticación. Devuelve solo sucursales `ACTIVE`, ordenadas por nombre y slug. Cada sucursal incluye `restaurantSlug`, `branchSlug`, ubicación, contacto, reglas e intervalos en formato `HH:mm`. Si no hay sucursales activas, devuelve `200 []`.
+No requiere autenticación. Devuelve solo sucursales `active`, ordenadas por nombre y slug. Cada sucursal incluye `restaurantSlug`, `branchSlug`, ubicación, contacto, reglas e intervalos en formato `HH:mm`. Si no hay sucursales activas, devuelve `200 []`.
 
 **Errores:** `404 RESTAURANT_NOT_FOUND`
 
