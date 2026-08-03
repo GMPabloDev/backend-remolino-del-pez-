@@ -1,3 +1,4 @@
+import { minutesToTime } from "../../../shared/time/time";
 import type { BranchDto } from "../dto/branch.dto";
 import type { BranchWithRelations } from "../repositories/branch.repository";
 
@@ -19,6 +20,18 @@ export function toBranchDto(branch: BranchWithRelations): BranchDto {
 		createdAt: branch.createdAt.toISOString(),
 		updatedAt: branch.updatedAt.toISOString(),
 		rules: branch.rules,
-		intervals: branch.intervals,
+		intervals: branch.intervals.map(toIntervalDto),
+	};
+}
+
+function toIntervalDto(interval: {
+	dayOfWeek: number;
+	startMinute: number;
+	endMinute: number;
+}) {
+	return {
+		dayOfWeek: interval.dayOfWeek,
+		startTime: minutesToTime(interval.startMinute),
+		endTime: minutesToTime(interval.endMinute),
 	};
 }

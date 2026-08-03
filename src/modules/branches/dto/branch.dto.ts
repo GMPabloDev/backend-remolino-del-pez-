@@ -1,7 +1,11 @@
-import type {
-	BranchRules,
-	BranchScheduleInterval,
-} from "../../../generated/prisma/client";
+import type { BranchRules } from "../../../generated/prisma/client";
+
+/** Intervalo de horario de una sucursal, con horas en formato HH:mm. */
+export interface BranchScheduleIntervalDto {
+	dayOfWeek: number;
+	startTime: string;
+	endTime: string;
+}
 
 /** Representación pública de una sucursal, con estado en minúsculas. */
 export interface BranchDto {
@@ -20,5 +24,5 @@ export interface BranchDto {
 	createdAt: string;
 	updatedAt: string;
 	rules: BranchRules | null;
-	intervals: BranchScheduleInterval[];
+	intervals: BranchScheduleIntervalDto[];
 }

@@ -1,4 +1,5 @@
 import type { BranchScheduleInterval } from "../../../generated/prisma/client";
+import { minutesToTime } from "../../../shared/time/time";
 import type { PublicBranchDto } from "../dto/public-branch.dto";
 import type { BranchWithRelations } from "../repositories/branch.repository";
 
@@ -38,12 +39,4 @@ function toPublicInterval(interval: BranchScheduleInterval) {
 		startTime: minutesToTime(interval.startMinute),
 		endTime: minutesToTime(interval.endMinute),
 	};
-}
-
-function minutesToTime(minutes: number): string {
-	const hours = Math.floor(minutes / 60)
-		.toString()
-		.padStart(2, "0");
-	const remainder = (minutes % 60).toString().padStart(2, "0");
-	return `${hours}:${remainder}`;
 }

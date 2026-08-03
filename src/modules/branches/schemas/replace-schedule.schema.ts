@@ -1,10 +1,5 @@
 import { z } from "zod";
-
-/** Convierte "HH:mm" a minutos desde medianoche */
-export function timeToMinutes(time: string): number {
-	const [h, m] = time.split(":").map(Number);
-	return h * 60 + m;
-}
+import { timeToMinutes } from "../../../shared/time/time";
 
 const scheduleIntervalSchema = z
 	.object({

@@ -1,3 +1,4 @@
+import { timeToMinutes } from "../../../../shared/time/time";
 import type { BranchDto } from "../../dto/branch.dto";
 import { BranchNotFoundException } from "../../exceptions/branch-not-found.exception";
 import { BranchScheduleConflictException } from "../../exceptions/branch-schedule-conflict.exception";
@@ -7,7 +8,6 @@ import type {
 	CreateIntervalData,
 } from "../../repositories/branch.repository";
 import type { ReplaceScheduleInput } from "../../schemas/replace-schedule.schema";
-import { timeToMinutes } from "../../schemas/replace-schedule.schema";
 import type { ReplaceBranchScheduleUseCase } from "./replace-branch-schedule.use-case";
 
 /**
