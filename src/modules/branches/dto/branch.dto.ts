@@ -1,4 +1,11 @@
-import type { BranchRules } from "../../../generated/prisma/client";
+/** Reglas de reserva de una sucursal (solo campos de negocio, sin metadatos). */
+export interface BranchRulesDto {
+	defaultReservationDurationMinutes: number;
+	minimumAdvanceMinutes: number;
+	maximumAdvanceDays: number;
+	arrivalToleranceMinutes: number;
+	maxPartySize: number;
+}
 
 /** Intervalo de horario de una sucursal, con horas en formato HH:mm. */
 export interface BranchScheduleIntervalDto {
@@ -23,6 +30,6 @@ export interface BranchDto {
 	status: "active" | "inactive";
 	createdAt: string;
 	updatedAt: string;
-	rules: BranchRules;
+	rules: BranchRulesDto;
 	intervals: BranchScheduleIntervalDto[];
 }

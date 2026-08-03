@@ -1,3 +1,5 @@
+import type { BranchRulesDto } from "./branch.dto";
+
 export interface PublicBranchDto {
 	restaurantSlug: string;
 	branchSlug: string;
@@ -8,13 +10,7 @@ export interface PublicBranchDto {
 	department: string;
 	phone: string;
 	email: string | null;
-	rules: {
-		defaultReservationDurationMinutes: number;
-		minimumAdvanceMinutes: number;
-		maximumAdvanceDays: number;
-		arrivalToleranceMinutes: number;
-		maxPartySize: number;
-	};
+	rules: BranchRulesDto;
 	intervals: Array<{
 		dayOfWeek: number;
 		startTime: string;

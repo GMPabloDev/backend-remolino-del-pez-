@@ -19,8 +19,24 @@ export function toBranchDto(branch: BranchWithRelations): BranchDto {
 		status: branch.status === "ACTIVE" ? "active" : "inactive",
 		createdAt: branch.createdAt.toISOString(),
 		updatedAt: branch.updatedAt.toISOString(),
-		rules: branch.rules,
+		rules: toRulesDto(branch.rules),
 		intervals: branch.intervals.map(toIntervalDto),
+	};
+}
+
+function toRulesDto(rules: {
+	defaultReservationDurationMinutes: number;
+	minimumAdvanceMinutes: number;
+	maximumAdvanceDays: number;
+	arrivalToleranceMinutes: number;
+	maxPartySize: number;
+}) {
+	return {
+		defaultReservationDurationMinutes: rules.defaultReservationDurationMinutes,
+		minimumAdvanceMinutes: rules.minimumAdvanceMinutes,
+		maximumAdvanceDays: rules.maximumAdvanceDays,
+		arrivalToleranceMinutes: rules.arrivalToleranceMinutes,
+		maxPartySize: rules.maxPartySize,
 	};
 }
 
