@@ -140,6 +140,13 @@ export class PrismaBranchRepository implements BranchRepository {
 				});
 			}
 
+			// El horario pertenece a la sucursal: bump manual de updatedAt para
+			// que PUT /schedule se refleje en Branch.updatedAt (data: {} no lo hace).
+			await tx.branch.update({
+				where: { id: branchId },
+				data: { updatedAt: new Date() },
+			});
+
 			return toBranchWithRelations(
 				await tx.branch.findUniqueOrThrow({
 					where: { id: branchId },

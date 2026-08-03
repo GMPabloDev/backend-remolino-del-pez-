@@ -294,7 +294,7 @@ Reemplaza todos los intervalos atómicamente.
 
 **Constraints:** `startTime < endTime`, sin solapamientos en un mismo día.
 
-**Response 200:** `Branch`.
+**Response 200:** `Branch`. El reemplazo del horario también actualiza `Branch.updatedAt` (los cambios en `intervals` se reflejan en el `updatedAt` de la sucursal).
 **Errores:** `404 BRANCH_NOT_FOUND`, `409 BRANCH_SCHEDULE_CONFLICT`, `403 FORBIDDEN`
 
 ### PATCH /restaurants/:restaurantId/branches/:branchId/status

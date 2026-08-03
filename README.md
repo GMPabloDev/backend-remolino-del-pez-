@@ -342,6 +342,7 @@ Reemplaza todos los intervalos atómicamente.
 - `dayOfWeek`: 1 (lunes) a 7 (domingo).
 - `startTime` / `endTime`: `HH:mm` 24h. `startTime < endTime`.
 - Sin solapamientos en un mismo día.
+- El reemplazo del horario también actualiza `Branch.updatedAt`.
 
 **Errores:** `409 BRANCH_SCHEDULE_CONFLICT`
 
