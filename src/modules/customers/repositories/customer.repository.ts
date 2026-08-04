@@ -25,6 +25,13 @@ export interface ExchangeMagicLinkResult {
 	session: CustomerSession;
 }
 
+export interface RotateCustomerSessionData {
+	sessionId: string;
+	now: Date;
+	refreshTokenHash: string;
+	expiresAt: Date;
+}
+
 export interface CustomerRepository {
 	findById(id: string): Promise<CustomerWithRestaurant | null>;
 	findByRestaurantSlugAndNormalizedEmail(
@@ -55,8 +62,24 @@ export interface CustomerRepository {
 	exchangeMagicLink(
 		data: ExchangeMagicLinkData,
 	): Promise<ExchangeMagicLinkResult | null>;
+	findSessionByRefreshTokenHash(
+		hash: string,
+	): Promise<CustomerSessionWithCustomer | null>;
+	rotateSession(
+		data: RotateCustomerSessionData,
+	): Promise<RotateCustomerSessionResult | null>;
+	revokeAllSessions(customerId: string): Promise<void>;
 }
 
 export type CustomerMagicLinkWithCustomer = CustomerMagicLink & {
 	customer: CustomerWithRestaurant;
 };
+
+export type CustomerSessionWithCustomer = CustomerSession & {
+	customer: CustomerWithRestaurant;
+};
+
+export interface RotateCustomerSessionResult {
+	customer: CustomerWithRestaurant;
+	session: CustomerSession;
+}

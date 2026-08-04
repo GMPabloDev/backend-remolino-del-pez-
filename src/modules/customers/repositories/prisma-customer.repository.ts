@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
 	type CustomerMagicLink,
 	Prisma,
@@ -10,6 +11,7 @@ import type {
 	CustomerRepository,
 	ExchangeMagicLinkData,
 	ExchangeMagicLinkResult,
+	RotateCustomerSessionData,
 } from "./customer.repository";
 
 const CUSTOMER_INCLUDE = {
@@ -228,6 +230,91 @@ export class PrismaCustomerRepository implements CustomerRepository {
 		}
 
 		throw new Error("No se pudo intercambiar el magic link");
+	}
+
+	async findSessionByRefreshTokenHash(hash: string) {
+		if (!hash) return null;
+
+		return prisma.customerSession.findUnique({
+			where: { refreshTokenHash: hash },
+			include: { customer: { include: CUSTOMER_INCLUDE } },
+		});
+	}
+
+	async rotateSession(data: RotateCustomerSessionData) {
+		if (!isValidUuid(data.sessionId)) return null;
+
+		for (let attempt = 1; attempt <= SERIALIZABLE_RETRY_LIMIT; attempt += 1) {
+			try {
+				return await prisma.$transaction(
+					async (tx) => {
+						const currentSession = await tx.customerSession.findUnique({
+							where: { id: data.sessionId },
+						});
+
+						if (
+							!currentSession ||
+							currentSession.revokedAt ||
+							currentSession.expiresAt <= data.now
+						) {
+							return null;
+						}
+
+						const newSessionId = randomUUID();
+						const revoked = await tx.customerSession.updateMany({
+							where: {
+								id: data.sessionId,
+								revokedAt: null,
+								expiresAt: { gt: data.now },
+							},
+							data: {
+								revokedAt: data.now,
+								replacedBySessionId: newSessionId,
+							},
+						});
+
+						if (revoked.count === 0) return null;
+
+						const session = await tx.customerSession.create({
+							data: {
+								id: newSessionId,
+								customerId: currentSession.customerId,
+								refreshTokenHash: data.refreshTokenHash,
+								expiresAt: data.expiresAt,
+							},
+						});
+
+						const customer = await tx.customer.findUnique({
+							where: { id: session.customerId },
+							include: CUSTOMER_INCLUDE,
+						});
+
+						if (!customer) return null;
+
+						return { customer, session };
+					},
+					{
+						isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+						maxWait: 5_000,
+						timeout: 10_000,
+					},
+				);
+			} catch (error) {
+				if (!isSerializationConflict(error)) throw error;
+				if (attempt === SERIALIZABLE_RETRY_LIMIT) throw error;
+			}
+		}
+
+		throw new Error("No se pudo rotar la sesión del cliente");
+	}
+
+	async revokeAllSessions(customerId: string): Promise<void> {
+		if (!isValidUuid(customerId)) return;
+
+		await prisma.customerSession.updateMany({
+			where: { customerId, revokedAt: null },
+			data: { revokedAt: new Date() },
+		});
 	}
 }
 
