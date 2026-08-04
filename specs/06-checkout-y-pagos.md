@@ -1,6 +1,7 @@
 # SPEC 06 — Checkout y pagos con Stripe
 
 > **Status:** Implementado
+> **Amended by:** SPEC 08
 > **Amended by:** SPEC 07
 > **Depends on:** SPEC 05
 > **Date:** 2026-07-28
