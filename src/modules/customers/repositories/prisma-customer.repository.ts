@@ -1,10 +1,15 @@
-import type { CustomerMagicLink } from "../../../generated/prisma/client";
+import {
+	type CustomerMagicLink,
+	Prisma,
+} from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
 import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
 	CreateMagicLinkData,
 	CustomerMagicLinkWithCustomer,
 	CustomerRepository,
+	ExchangeMagicLinkData,
+	ExchangeMagicLinkResult,
 } from "./customer.repository";
 
 const CUSTOMER_INCLUDE = {
@@ -18,6 +23,8 @@ const MAGIC_LINK_WITH_CUSTOMER_INCLUDE = {
 		include: CUSTOMER_INCLUDE,
 	},
 } as const;
+
+const SERIALIZABLE_RETRY_LIMIT = 3;
 
 export class PrismaCustomerRepository implements CustomerRepository {
 	async findById(id: string) {
@@ -148,4 +155,98 @@ export class PrismaCustomerRepository implements CustomerRepository {
 			where: { id: magicLinkId },
 		});
 	}
+
+	async exchangeMagicLink(
+		data: ExchangeMagicLinkData,
+	): Promise<ExchangeMagicLinkResult | null> {
+		if (!data.tokenHash) return null;
+
+		for (let attempt = 1; attempt <= SERIALIZABLE_RETRY_LIMIT; attempt += 1) {
+			try {
+				return await prisma.$transaction(
+					async (tx) => {
+						const magicLink = await tx.customerMagicLink.findUnique({
+							where: { tokenHash: data.tokenHash },
+						});
+
+						if (
+							!magicLink ||
+							magicLink.consumedAt ||
+							magicLink.invalidatedAt ||
+							magicLink.expiresAt <= data.consumedAt
+						) {
+							return null;
+						}
+
+						const consumed = await tx.customerMagicLink.updateMany({
+							where: {
+								id: magicLink.id,
+								consumedAt: null,
+								invalidatedAt: null,
+								expiresAt: { gt: data.consumedAt },
+							},
+							data: { consumedAt: data.consumedAt },
+						});
+
+						if (consumed.count === 0) return null;
+
+						await tx.customer.updateMany({
+							where: {
+								id: magicLink.customerId,
+								emailVerifiedAt: null,
+							},
+							data: { emailVerifiedAt: data.consumedAt },
+						});
+
+						const customer = await tx.customer.findUnique({
+							where: { id: magicLink.customerId },
+							include: CUSTOMER_INCLUDE,
+						});
+
+						if (!customer) return null;
+
+						const session = await tx.customerSession.create({
+							data: {
+								customerId: customer.id,
+								refreshTokenHash: data.refreshTokenHash,
+								expiresAt: data.refreshTokenExpiresAt,
+							},
+						});
+
+						return { customer, session };
+					},
+					{
+						isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+						maxWait: 5_000,
+						timeout: 10_000,
+					},
+				);
+			} catch (error) {
+				if (!isSerializationConflict(error)) throw error;
+				if (attempt === SERIALIZABLE_RETRY_LIMIT) throw error;
+			}
+		}
+
+		throw new Error("No se pudo intercambiar el magic link");
+	}
+}
+
+function isSerializationConflict(error: unknown): boolean {
+	return (
+		(error instanceof Prisma.PrismaClientKnownRequestError &&
+			error.code === "P2034") ||
+		hasAdapterCode(error, "40001")
+	);
+}
+
+function hasAdapterCode(error: unknown, code: string): boolean {
+	return (
+		isRecord(error) &&
+		isRecord(error.cause) &&
+		error.cause.originalCode === code
+	);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
 }

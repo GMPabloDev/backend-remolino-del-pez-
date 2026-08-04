@@ -1,6 +1,7 @@
 import type {
 	CustomerMagicLink,
 	CustomerMagicLinkSource,
+	CustomerSession,
 } from "../../../generated/prisma/client";
 import type { CustomerWithRestaurant } from "../dto/customer.dto";
 
@@ -10,6 +11,18 @@ export interface CreateMagicLinkData {
 	source: CustomerMagicLinkSource;
 	tokenHash: string;
 	expiresAt: Date;
+}
+
+export interface ExchangeMagicLinkData {
+	tokenHash: string;
+	consumedAt: Date;
+	refreshTokenHash: string;
+	refreshTokenExpiresAt: Date;
+}
+
+export interface ExchangeMagicLinkResult {
+	customer: CustomerWithRestaurant;
+	session: CustomerSession;
 }
 
 export interface CustomerRepository {
@@ -39,6 +52,9 @@ export interface CustomerRepository {
 		magicLinkId: string,
 		consumedAt: Date,
 	): Promise<CustomerMagicLink | null>;
+	exchangeMagicLink(
+		data: ExchangeMagicLinkData,
+	): Promise<ExchangeMagicLinkResult | null>;
 }
 
 export type CustomerMagicLinkWithCustomer = CustomerMagicLink & {
