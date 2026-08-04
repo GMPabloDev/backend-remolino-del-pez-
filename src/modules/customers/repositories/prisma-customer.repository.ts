@@ -316,6 +316,15 @@ export class PrismaCustomerRepository implements CustomerRepository {
 			data: { revokedAt: new Date() },
 		});
 	}
+
+	async revokeSessionByRefreshTokenHash(hash: string): Promise<void> {
+		if (!hash) return;
+
+		await prisma.customerSession.updateMany({
+			where: { refreshTokenHash: hash, revokedAt: null },
+			data: { revokedAt: new Date() },
+		});
+	}
 }
 
 function isSerializationConflict(error: unknown): boolean {

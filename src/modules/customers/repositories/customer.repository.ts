@@ -69,6 +69,7 @@ export interface CustomerRepository {
 		data: RotateCustomerSessionData,
 	): Promise<RotateCustomerSessionResult | null>;
 	revokeAllSessions(customerId: string): Promise<void>;
+	revokeSessionByRefreshTokenHash(hash: string): Promise<void>;
 }
 
 export type CustomerMagicLinkWithCustomer = CustomerMagicLink & {
