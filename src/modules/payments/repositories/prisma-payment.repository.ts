@@ -2,6 +2,7 @@ import { Prisma, ReservationStatus } from "../../../generated/prisma/client";
 import { prisma } from "../../../shared/database/prisma-client";
 import { isValidUuid } from "../../../shared/guards/uuid.guard";
 import type {
+	ConfirmedCustomerData,
 	ConfirmPaymentResult,
 	CreatePaymentAttemptData,
 	PaymentRepository,
@@ -142,6 +143,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
 		attemptId: string,
 		providerPaymentIntentId: string,
 		paidAt: Date,
+		customer?: ConfirmedCustomerData,
 	): Promise<ConfirmPaymentResult | null> {
 		for (let attempt = 1; attempt <= SERIALIZABLE_RETRY_LIMIT; attempt += 1) {
 			try {
@@ -149,6 +151,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
 					async (tx) => {
 						const reservation = await tx.reservation.findUnique({
 							where: { id: reservationId },
+							include: { branch: { select: { restaurantId: true } } },
 						});
 
 						// Solo confirma si está PENDING_PAYMENT, no vencida y no tiene otro intento confirmado
@@ -167,12 +170,67 @@ export class PrismaPaymentRepository implements PaymentRepository {
 
 						if (attempt?.status !== "PENDING") return null;
 
+						let customerId: string | null = null;
+						let magicLinkId: string | null = null;
+
+						if (customer) {
+							const customerRecord = await tx.customer.upsert({
+								where: {
+									restaurantId_normalizedEmail: {
+										restaurantId: reservation.branch.restaurantId,
+										normalizedEmail: customer.normalizedEmail,
+									},
+								},
+								create: {
+									restaurantId: reservation.branch.restaurantId,
+									fullName: customer.fullName,
+									email: customer.email,
+									normalizedEmail: customer.normalizedEmail,
+									phone: customer.phone,
+								},
+								update: {},
+							});
+
+							customerId = customerRecord.id;
+
+							const existingMagicLink = await tx.customerMagicLink.findUnique({
+								where: { reservationId },
+							});
+
+							if (existingMagicLink) {
+								magicLinkId = existingMagicLink.id;
+							} else {
+								await tx.customerMagicLink.updateMany({
+									where: {
+										customerId: customerRecord.id,
+										consumedAt: null,
+										invalidatedAt: null,
+										expiresAt: { gt: paidAt },
+									},
+									data: { invalidatedAt: paidAt },
+								});
+
+								const magicLink = await tx.customerMagicLink.create({
+									data: {
+										customerId: customerRecord.id,
+										reservationId,
+										source: "RESERVATION_CONFIRMATION",
+										tokenHash: customer.tokenHash,
+										expiresAt: customer.tokenExpiresAt,
+									},
+								});
+
+								magicLinkId = magicLink.id;
+							}
+						}
+
 						await tx.reservation.update({
 							where: { id: reservationId },
 							data: {
 								status: ReservationStatus.CONFIRMED,
 								confirmedAt: paidAt,
 								confirmedPaymentAttemptId: attemptId,
+								customerId,
 							},
 						});
 
@@ -185,7 +243,12 @@ export class PrismaPaymentRepository implements PaymentRepository {
 							},
 						});
 
-						return { reservationId, attemptId };
+						return {
+							reservationId,
+							attemptId,
+							customerId,
+							magicLinkId,
+						};
 					},
 					{
 						isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -243,8 +306,9 @@ export class PrismaPaymentRepository implements PaymentRepository {
 function isSerializationConflict(error: unknown): boolean {
 	return (
 		(error instanceof Prisma.PrismaClientKnownRequestError &&
-			error.code === "P2034") ||
-		hasAdapterCode(error, "40001")
+			(error.code === "P2034" || error.code === "P2002")) ||
+		hasAdapterCode(error, "40001") ||
+		hasAdapterCode(error, "23505")
 	);
 }
 

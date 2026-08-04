@@ -40,9 +40,20 @@ export interface CreatePaymentAttemptData {
 
 // --- Resultado de confirmación ---
 
+export interface ConfirmedCustomerData {
+	fullName: string;
+	email: string;
+	normalizedEmail: string;
+	phone: string;
+	tokenHash: string;
+	tokenExpiresAt: Date;
+}
+
 export interface ConfirmPaymentResult {
 	reservationId: string;
 	attemptId: string;
+	customerId: string | null;
+	magicLinkId: string | null;
 }
 
 // --- Datos de actualización de intento ---
@@ -113,6 +124,7 @@ export interface PaymentRepository {
 		attemptId: string,
 		providerPaymentIntentId: string,
 		paidAt: Date,
+		customer?: ConfirmedCustomerData,
 	): Promise<ConfirmPaymentResult | null>;
 
 	// Eventos webhook
