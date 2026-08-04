@@ -9,7 +9,7 @@ import type {
 
 const CUSTOMER_INCLUDE = {
 	restaurant: {
-		select: { slug: true },
+		select: { name: true, slug: true },
 	},
 } as const;
 

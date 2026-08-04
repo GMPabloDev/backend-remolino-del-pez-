@@ -8,5 +8,5 @@ export interface CustomerDto {
 }
 
 export type CustomerWithRestaurant = Customer & {
-	restaurant: Pick<Restaurant, "slug">;
+	restaurant: Pick<Restaurant, "slug" | "name">;
 };
