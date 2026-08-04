@@ -96,7 +96,7 @@ const corsOrigins = env.CORS_ORIGINS.split(",")
 app.use(
 	"*",
 	cors({
-		origin: "*",
+		origin: corsOrigins,
 		allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization", "Idempotency-Key"],
 		maxAge: 600,
@@ -105,6 +105,20 @@ app.use(
 );
 
 app.onError(errorHandler);
+
+// 404 global con el formato de error del contrato
+app.notFound((c) => {
+	return c.json(
+		{
+			error: {
+				code: "ROUTE_NOT_FOUND",
+				message: "La ruta solicitada no existe",
+				details: [],
+			},
+		},
+		404,
+	);
+});
 
 // --- Servicios compartidos ---
 const passwordService = new BunPasswordService();

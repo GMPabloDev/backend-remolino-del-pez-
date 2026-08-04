@@ -287,7 +287,9 @@ Reemplaza todos los intervalos atómicamente.
 ```json
 {
   "intervals": [
-    { "dayOfWeek": "1-7 (1=lunes)", "startTime": "HH:mm", "endTime": "HH:mm" }
+    { "dayOfWeek": 1, "startTime": "12:00", "endTime": "15:00" },
+    { "dayOfWeek": 1, "startTime": "17:00", "endTime": "22:00" },
+    { "dayOfWeek": 2, "startTime": "12:00", "endTime": "22:00" }
   ]
 }
 ```
@@ -299,7 +301,10 @@ Reemplaza todos los intervalos atómicamente.
 
 ### PATCH /restaurants/:restaurantId/branches/:branchId/status
 
-**Request:** `{ "status": "active | inactive" }`
+**Request:**
+```json
+{ "status": "active" }
+```
 
 - `active` requiere al menos un intervalo (`422` si no).
 - `inactive` siempre se permite.
@@ -376,7 +381,10 @@ Todos los campos opcionales:
 
 ### PATCH /restaurants/:restaurantId/branches/:branchId/tables/:tableId/status
 
-**Request:** `{ "status": "active | inactive" }`
+**Request:**
+```json
+{ "status": "active" }
+```
 
 - Se permite activar mesas incluso si la sucursal está inactiva.
 

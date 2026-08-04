@@ -29,6 +29,13 @@ Este contrato está dividido por consumidor para que cada frontend solo copie su
 | `POST /public/restaurants/:rslug/customer-auth/magic-links` · `POST /public/customer-auth/magic-links/exchange` | [01-publico.md](./01-publico.md) |
 | `POST /customer-auth/refresh` · `POST /customer-auth/logout` · `GET /customer-auth/me` | [01-publico.md](./01-publico.md) |
 | `POST /webhooks/stripe` | [01-publico.md](./01-publico.md#post-webhooksstripe) |
+| `GET /` (health) | [01-publico.md](./01-publico.md#get--health) |
+
+## Notas transversales
+
+- **Errores**: cualquier ruta desconocida responde `404 ROUTE_NOT_FOUND` con el mismo formato `{ error: { code, message, details } }`. Ver tabla de códigos en [00-convenciones.md](./00-convenciones.md#códigos-de-error).
+- **CORS**: la API solo acepta orígenes listados en `CORS_ORIGINS`. Ver [00-convenciones.md](./00-convenciones.md#cors).
+- **Rutas públicas**: `POST /auth/refresh`, `POST /auth/logout`, `POST /customer-auth/refresh`, `POST /customer-auth/logout` y `POST .../magic-links` no requieren `Authorization`. Ver [00-convenciones.md](./00-convenciones.md#base-url).
 
 ## Cómo leer este contrato
 
