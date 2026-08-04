@@ -62,6 +62,7 @@ export interface CustomerRepository {
 	exchangeMagicLink(
 		data: ExchangeMagicLinkData,
 	): Promise<ExchangeMagicLinkResult | null>;
+	findSessionById(id: string): Promise<CustomerSessionWithCustomer | null>;
 	findSessionByRefreshTokenHash(
 		hash: string,
 	): Promise<CustomerSessionWithCustomer | null>;

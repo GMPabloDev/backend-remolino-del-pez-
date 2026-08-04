@@ -232,6 +232,15 @@ export class PrismaCustomerRepository implements CustomerRepository {
 		throw new Error("No se pudo intercambiar el magic link");
 	}
 
+	async findSessionById(id: string) {
+		if (!isValidUuid(id)) return null;
+
+		return prisma.customerSession.findUnique({
+			where: { id },
+			include: { customer: { include: CUSTOMER_INCLUDE } },
+		});
+	}
+
 	async findSessionByRefreshTokenHash(hash: string) {
 		if (!hash) return null;
 
