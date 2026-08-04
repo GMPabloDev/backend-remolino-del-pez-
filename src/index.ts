@@ -16,9 +16,17 @@ import { ListPublicBranchesUseCaseImpl } from "./modules/branches/use-cases/list
 import { ReplaceBranchScheduleUseCaseImpl } from "./modules/branches/use-cases/replace-branch-schedule/replace-branch-schedule.use-case.impl";
 import { UpdateBranchUseCaseImpl } from "./modules/branches/use-cases/update-branch/update-branch.use-case.impl";
 import { UpdateBranchStatusUseCaseImpl } from "./modules/branches/use-cases/update-branch-status/update-branch-status.use-case.impl";
+import { createCustomerAuthRouter } from "./modules/customer-auth/router";
 import { CryptoCustomerMagicLinkService } from "./modules/customer-auth/services/crypto-customer-magic-link.service";
+import { JwtCustomerTokenService } from "./modules/customer-auth/services/jwt-customer-token.service";
+import { ExchangeCustomerMagicLinkUseCaseImpl } from "./modules/customer-auth/use-cases/exchange-customer-magic-link/exchange-customer-magic-link.use-case.impl";
+import { GetCurrentCustomerUseCaseImpl } from "./modules/customer-auth/use-cases/get-current-customer/get-current-customer.use-case.impl";
+import { LogoutCustomerSessionUseCaseImpl } from "./modules/customer-auth/use-cases/logout-customer-session/logout-customer-session.use-case.impl";
+import { RefreshCustomerSessionUseCaseImpl } from "./modules/customer-auth/use-cases/refresh-customer-session/refresh-customer-session.use-case.impl";
 import { PrismaCustomerRepository } from "./modules/customers/repositories/prisma-customer.repository";
+import { TemplateCustomerAccessEmailService } from "./modules/customers/services/template-customer-access-email.service";
 import { TemplateReservationConfirmationEmailService } from "./modules/customers/services/template-reservation-confirmation-email.service";
+import { RequestCustomerMagicLinkUseCaseImpl } from "./modules/customers/use-cases/request-customer-magic-link/request-customer-magic-link.use-case.impl";
 import { createBranchDishRouter } from "./modules/menu/branch-dish.router";
 import { createCategoryRouter } from "./modules/menu/categories.router";
 import { createDishRouter } from "./modules/menu/dishes.router";
@@ -103,8 +111,10 @@ const passwordService = new BunPasswordService();
 const tokenService = new JwtTokenService();
 const checkoutTokenService = new HmacCheckoutTokenService(env);
 const customerMagicLinkService = new CryptoCustomerMagicLinkService();
+const customerTokenService = new JwtCustomerTokenService(env);
 const confirmationEmailService =
 	new TemplateReservationConfirmationEmailService();
+const customerAccessEmailService = new TemplateCustomerAccessEmailService();
 const emailService = new NodemailerEmailService(env);
 
 // --- Repositorios ---
@@ -304,6 +314,30 @@ const changePassword = new ChangePasswordUseCaseImpl(
 	passwordService,
 );
 
+// --- Casos de uso: Autenticación de clientes ---
+const requestCustomerMagicLink = new RequestCustomerMagicLinkUseCaseImpl(
+	customerRepository,
+	customerMagicLinkService,
+	customerAccessEmailService,
+	emailService,
+	env.CUSTOMER_MAGIC_LINK_URL,
+);
+const exchangeCustomerMagicLink = new ExchangeCustomerMagicLinkUseCaseImpl(
+	customerRepository,
+	customerTokenService,
+);
+const refreshCustomerSession = new RefreshCustomerSessionUseCaseImpl(
+	customerRepository,
+	customerTokenService,
+);
+const logoutCustomerSession = new LogoutCustomerSessionUseCaseImpl(
+	customerRepository,
+	customerTokenService,
+);
+const getCurrentCustomer = new GetCurrentCustomerUseCaseImpl(
+	customerRepository,
+);
+
 // --- Rutas ---
 app.route(
 	"/auth",
@@ -428,6 +462,19 @@ app.route(
 	createReservationRouter({
 		getAvailability,
 		createTemporaryReservation,
+	}),
+);
+
+app.route(
+	"/",
+	createCustomerAuthRouter({
+		requestCustomerMagicLinkUseCase: requestCustomerMagicLink,
+		exchangeCustomerMagicLinkUseCase: exchangeCustomerMagicLink,
+		refreshCustomerSessionUseCase: refreshCustomerSession,
+		logoutCustomerSessionUseCase: logoutCustomerSession,
+		getCurrentCustomerUseCase: getCurrentCustomer,
+		customerTokenService,
+		customerRepository,
 	}),
 );
 

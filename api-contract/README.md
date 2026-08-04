@@ -6,8 +6,8 @@ Este contrato está dividido por consumidor para que cada frontend solo copie su
 
 | Documento | Contenido | Consumidor |
 |-----------|-----------|------------|
-| [00-convenciones.md](./00-convenciones.md) | Errores globales, autenticación y tokens, casing, fechas/zona horaria, moneda, idempotencia | Todos |
-| [01-publico.md](./01-publico.md) | Descubrimiento, menú, disponibilidad, reserva temporal, checkout, estado de pago, webhook + flujo recomendado | App de clientes |
+| [00-convenciones.md](./00-convenciones.md) | Errores globales, autenticación interna y de clientes, tokens, casing, fechas/zona horaria, moneda, idempotencia | Todos |
+| [01-publico.md](./01-publico.md) | Descubrimiento, menú, disponibilidad, reserva temporal, checkout, customer-auth, estado de pago, webhook + flujo recomendado | App de clientes |
 | [02-administracion.md](./02-administracion.md) | Auth interno, usuarios, restaurante, sucursales, mesas, catálogo | App de staff |
 
 ## Mapa de endpoints
@@ -26,10 +26,12 @@ Este contrato está dividido por consumidor para que cada frontend solo copie su
 | `GET .../branches/:bslug/menu` | [01-publico.md](./01-publico.md#get-publicrestaurantsrestaurantslugbranchesbranchslugmenu) |
 | `GET .../reservations/availability` · `POST .../reservations/temporary` | [01-publico.md](./01-publico.md) |
 | `POST .../reservations/:id/checkout` · `GET .../reservations/:id/payment` | [01-publico.md](./01-publico.md) |
+| `POST /public/restaurants/:rslug/customer-auth/magic-links` · `POST /public/customer-auth/magic-links/exchange` | [01-publico.md](./01-publico.md) |
+| `POST /customer-auth/refresh` · `POST /customer-auth/logout` · `GET /customer-auth/me` | [01-publico.md](./01-publico.md) |
 | `POST /webhooks/stripe` | [01-publico.md](./01-publico.md#post-webhooksstripe) |
 
 ## Cómo leer este contrato
 
-1. Empieza por [00-convenciones.md](./00-convenciones.md): formato de errores, flujo de tokens (rotación, single-flight) y convenciones (casing, fechas, moneda).
+1. Empieza por [00-convenciones.md](./00-convenciones.md): formato de errores, flujo de tokens internos y de clientes (rotación, single-flight) y convenciones (casing, fechas, moneda).
 2. Si es la app de clientes, sigue el [flujo recomendado](./01-publico.md#flujo-recomendado-de-extremo-a-extremo) de [01-publico.md](./01-publico.md).
 3. Si es la app de staff, consulta [02-administracion.md](./02-administracion.md) por módulo.

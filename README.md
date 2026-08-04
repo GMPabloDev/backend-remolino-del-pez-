@@ -8,7 +8,7 @@ API para la gestión de restaurantes, sucursales y usuarios internos.
 - **Framework:** Hono v4
 - **ORM:** Prisma Client + PostgreSQL (Neon)
 - **Validación:** Zod v4 + @hono/standard-validator
-- **Autenticación:** JWT + refresh tokens rotativos (jose)
+- **Autenticación:** JWT interno y de clientes + refresh tokens rotativos (jose)
 
 ## Requisitos
 
@@ -34,6 +34,15 @@ bun run seed           # Crear el administrador inicial
 | `STRIPE_WEBHOOK_SECRET` | Secreto de firma de webhooks Stripe (whsec_...) | Sí |
 | `STRIPE_CHECKOUT_SUCCESS_URL` | URL de retorno tras pago exitoso | Sí |
 | `STRIPE_CHECKOUT_CANCEL_URL` | URL de retorno tras cancelación | Sí |
+| `CUSTOMER_ACCESS_TOKEN_SECRET` | Secreto JWT independiente para access tokens de clientes (mín. 32 caracteres) | Sí |
+| `CUSTOMER_MAGIC_LINK_URL` | URL absoluta del callback frontend para magic links | Sí |
+| `SMTP_HOST` | Servidor SMTP, por ejemplo `smtp.gmail.com` | Sí |
+| `SMTP_PORT` | Puerto SMTP, `587` para Gmail con STARTTLS | Sí |
+| `SMTP_SECURE` | `false` para Gmail en puerto 587 | Sí |
+| `SMTP_USER` | Cuenta remitente SMTP | Sí |
+| `SMTP_PASS` | Contraseña de aplicación SMTP; nunca la contraseña principal | Sí |
+| `SMTP_FROM_NAME` | Nombre visible del remitente | Sí |
+| `SMTP_FROM_EMAIL` | Email autorizado del remitente | Sí |
 
 ## Desarrollo
 
@@ -95,6 +104,95 @@ Authorization: Bearer <accessToken>
 ```
 
 **Errores:** `401 INVALID_CREDENTIALS` (no revela si el email existe o está inactivo).
+
+### Autenticación passwordless de clientes
+
+Los clientes no crean una cuenta antes de pagar ni usan contraseñas. Después de un pago confirmado, el backend crea o reutiliza la cuenta, genera un magic link y envía un correo combinado con agradecimiento, resumen de la reserva y acceso.
+
+### POST /public/restaurants/:restaurantSlug/customer-auth/magic-links
+
+Solicita un nuevo magic link. Responde siempre `202` con un mensaje genérico para no revelar si el restaurante o correo existe.
+
+**Request:**
+```json
+{ "email": "ana@example.com" }
+```
+
+**Response 202:**
+```json
+{ "message": "Si existe una cuenta elegible, enviaremos un enlace de acceso." }
+```
+
+Las solicitudes manuales tienen cooldown de un minuto e invalidan enlaces anteriores no consumidos. Los correos automáticos por pagos confirmados no tienen ese límite.
+
+### POST /public/customer-auth/magic-links/exchange
+
+Intercambia un magic link de un solo uso por una sesión.
+
+**Request:**
+```json
+{ "token": "opaque-base64url-token" }
+```
+
+**Response 200:**
+```json
+{
+  "accessToken": "jwt",
+  "refreshToken": "opaque-token",
+  "customer": {
+    "fullName": "Ana Pérez",
+    "email": "ana@example.com",
+    "phone": "+51987654321",
+    "restaurantSlug": "central"
+  }
+}
+```
+
+El enlace dura 15 minutos. El access token dura 25 minutos y el refresh token 30 días. El frontend debe eliminar el token de la URL con `history.replaceState`.
+
+**Errores:** `400 VALIDATION_ERROR`, `401 INVALID_MAGIC_LINK`.
+
+### POST /customer-auth/refresh
+
+Rota el refresh token. El anterior queda inválido inmediatamente. Si se reutiliza un token rotado, se revocan todas las sesiones del cliente.
+
+**Request:**
+```json
+{ "refreshToken": "opaque-token" }
+```
+
+**Response 200:** mismo formato que el intercambio.
+
+**Errores:** `400 VALIDATION_ERROR`, `401 INVALID_CUSTOMER_REFRESH_TOKEN`.
+
+### POST /customer-auth/logout
+
+Revoca solo la sesión indicada. Es idempotente.
+
+**Request:**
+```json
+{ "refreshToken": "opaque-token" }
+```
+
+**Response 204:** sin contenido.
+
+### GET /customer-auth/me
+
+Requiere `Authorization: Bearer <customerAccessToken>`.
+
+**Response 200:**
+```json
+{
+  "fullName": "Ana Pérez",
+  "email": "ana@example.com",
+  "phone": "+51987654321",
+  "restaurantSlug": "central"
+}
+```
+
+No lista reservas ni pagos.
+
+**Errores:** `401 CUSTOMER_AUTH_REQUIRED`.
 
 ### POST /auth/refresh
 
@@ -662,7 +760,10 @@ Crea un bloqueo de 15 minutos y asigna una única mesa activa con la menor capac
 | 400 | `VALIDATION_ERROR` | Datos de entrada inválidos |
 | 401 | `UNAUTHORIZED` | Token requerido, inválido o expirado |
 | 401 | `INVALID_CREDENTIALS` | Email o contraseña incorrectos |
-| 401 | `INVALID_REFRESH_TOKEN` | Refresh token inválido o expirado |
+| 401 | `INVALID_REFRESH_TOKEN` | Refresh token interno inválido o expirado |
+| 401 | `INVALID_MAGIC_LINK` | Magic link inexistente, vencido, consumido o invalidado |
+| 401 | `INVALID_CUSTOMER_REFRESH_TOKEN` | Refresh token de cliente inválido, vencido, reemplazado o revocado |
+| 401 | `CUSTOMER_AUTH_REQUIRED` | Access token de cliente ausente, inválido o sin sesión activa |
 | 403 | `FORBIDDEN` | Sin permisos para la operación |
 | 404 | `RESTAURANT_NOT_FOUND` | Restaurante no existe |
 | 404 | `BRANCH_NOT_FOUND` | Sucursal no existe |
@@ -697,7 +798,7 @@ Crea un bloqueo de 15 minutos y asigna una única mesa activa con la menor capac
 
 ## Checkout y pagos con Stripe
 
-Las reservas temporales incluyen un `checkoutToken` opaco (HMAC-SHA256) que autoriza las operaciones de pago. No se requiere sesión de usuario interno.
+Las reservas temporales incluyen un `checkoutToken` opaco (HMAC-SHA256) que autoriza las operaciones de pago. No se requiere sesión de usuario interno. Tras confirmar el pago, el token sigue siendo válido para checkout/consulta hasta antes de `confirmedAt + 24 horas`; después responde `404 PUBLIC_PAYMENT_NOT_FOUND` y el cliente debe usar customer-auth.
 
 ### POST /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/:reservationId/checkout
 
@@ -724,6 +825,8 @@ Crea o reutiliza una Stripe Checkout Session para pagar la reserva.
 **Response 200 (sesión reutilizada):** mismo formato.
 
 **Errores:** `404 PUBLIC_PAYMENT_NOT_FOUND`, `409 RESERVATION_EXPIRED`, `409 RESERVATION_ALREADY_CONFIRMED`, `503 PAYMENT_PROVIDER_UNAVAILABLE`.
+
+Una reserva confirmada cuyo `confirmedAt + 24 horas` ya pasó responde `404 PUBLIC_PAYMENT_NOT_FOUND`, sin revelar que existe.
 
 ### GET /public/restaurants/:restaurantSlug/branches/:branchSlug/reservations/:reservationId/payment
 
@@ -772,8 +875,9 @@ Recibe eventos de Stripe. Autenticado por `Stripe-Signature`. Procesa idempotent
 4. Stripe redirige a `successUrl` o `cancelUrl`.
 5. El frontend consulta `GET .../payment` para esperar la confirmación.
 6. Stripe envía webhook → la reserva pasa a `confirmed`.
+7. El backend crea o reutiliza la cuenta de cliente y envía el correo combinado de confirmación y acceso.
 
-Pagos tardíos, duplicados o con importe incorrecto se reembolsan automáticamente.
+Pagos tardíos, duplicados o con importe incorrecto se reembolsan automáticamente. Un fallo SMTP no revierte el pago ni la reserva.
 
 ### Verificación manual con Stripe CLI
 

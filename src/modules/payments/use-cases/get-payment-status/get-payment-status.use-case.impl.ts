@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { PublicPaymentNotFoundException } from "../../exceptions/public-payment-not-found.exception";
 import { toPaymentStatusDto } from "../../mapper/payment.mapper";
 import type { PaymentRepository } from "../../repositories/payment.repository";
+import { isConfirmedCheckoutTokenExpired } from "../../services/confirmed-checkout-token-window";
 import type { GetPaymentStatusUseCase } from "./get-payment-status.use-case";
 
 export class GetPaymentStatusUseCaseImpl implements GetPaymentStatusUseCase {
@@ -30,6 +31,16 @@ export class GetPaymentStatusUseCaseImpl implements GetPaymentStatusUseCase {
 		if (
 			tokenHash.length !== storedHash.length ||
 			!timingSafeEqual(tokenHash, storedHash)
+		) {
+			throw new PublicPaymentNotFoundException();
+		}
+
+		if (
+			isConfirmedCheckoutTokenExpired(
+				reservation.status,
+				reservation.confirmedAt,
+				new Date(),
+			)
 		) {
 			throw new PublicPaymentNotFoundException();
 		}

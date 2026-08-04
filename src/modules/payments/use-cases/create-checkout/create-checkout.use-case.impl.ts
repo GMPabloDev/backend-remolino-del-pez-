@@ -8,6 +8,7 @@ import type {
 	PaymentRepository,
 	PaymentReservationContext,
 } from "../../repositories/payment.repository";
+import { isConfirmedCheckoutTokenExpired } from "../../services/confirmed-checkout-token-window";
 import type { PaymentGatewayService } from "../../services/payment-gateway.service";
 import type {
 	CreateCheckoutResult,
@@ -48,11 +49,21 @@ export class CreateCheckoutUseCaseImpl implements CreateCheckoutUseCase {
 		}
 
 		// Validar estado de la reserva
+		const now = new Date();
+		if (
+			isConfirmedCheckoutTokenExpired(
+				reservation.status,
+				reservation.confirmedAt,
+				now,
+			)
+		) {
+			throw new PublicPaymentNotFoundException();
+		}
+
 		if (reservation.status === "CONFIRMED") {
 			throw new ReservationAlreadyConfirmedException();
 		}
 
-		const now = new Date();
 		if (reservation.expiresAt <= now) {
 			throw new ReservationExpiredException();
 		}
