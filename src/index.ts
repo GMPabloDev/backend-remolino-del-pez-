@@ -16,6 +16,9 @@ import { ListPublicBranchesUseCaseImpl } from "./modules/branches/use-cases/list
 import { ReplaceBranchScheduleUseCaseImpl } from "./modules/branches/use-cases/replace-branch-schedule/replace-branch-schedule.use-case.impl";
 import { UpdateBranchUseCaseImpl } from "./modules/branches/use-cases/update-branch/update-branch.use-case.impl";
 import { UpdateBranchStatusUseCaseImpl } from "./modules/branches/use-cases/update-branch-status/update-branch-status.use-case.impl";
+import { CryptoCustomerMagicLinkService } from "./modules/customer-auth/services/crypto-customer-magic-link.service";
+import { PrismaCustomerRepository } from "./modules/customers/repositories/prisma-customer.repository";
+import { TemplateReservationConfirmationEmailService } from "./modules/customers/services/template-reservation-confirmation-email.service";
 import { createBranchDishRouter } from "./modules/menu/branch-dish.router";
 import { createCategoryRouter } from "./modules/menu/categories.router";
 import { createDishRouter } from "./modules/menu/dishes.router";
@@ -71,6 +74,7 @@ import { ResetUserPasswordUseCaseImpl } from "./modules/users/use-cases/reset-us
 import { UpdateUserUseCaseImpl } from "./modules/users/use-cases/update-user/update-user.use-case.impl";
 import { UpdateUserStatusUseCaseImpl } from "./modules/users/use-cases/update-user-status/update-user-status.use-case.impl";
 import { env } from "./shared/config/env";
+import { NodemailerEmailService } from "./shared/email/nodemailer-email.service";
 import { errorHandler } from "./shared/errors/error-handler";
 import { BunPasswordService } from "./shared/security/bun-password.service";
 import { JwtTokenService } from "./shared/security/jwt-token.service";
@@ -98,6 +102,10 @@ app.onError(errorHandler);
 const passwordService = new BunPasswordService();
 const tokenService = new JwtTokenService();
 const checkoutTokenService = new HmacCheckoutTokenService(env);
+const customerMagicLinkService = new CryptoCustomerMagicLinkService();
+const confirmationEmailService =
+	new TemplateReservationConfirmationEmailService();
+const emailService = new NodemailerEmailService(env);
 
 // --- Repositorios ---
 const restaurantRepository = new PrismaRestaurantRepository();
@@ -108,6 +116,7 @@ const dishRepository = new PrismaDishRepository();
 const branchDishRepository = new PrismaBranchDishRepository();
 const reservationRepository = new PrismaReservationRepository();
 const paymentRepository = new PrismaPaymentRepository();
+const customerRepository = new PrismaCustomerRepository();
 const userRepository = new PrismaUserRepository();
 const authRepository = new PrismaAuthRepository();
 
@@ -272,6 +281,11 @@ const getPaymentStatus = new GetPaymentStatusUseCaseImpl(paymentRepository);
 const processStripeWebhook = new ProcessStripeWebhookUseCaseImpl(
 	paymentRepository,
 	paymentGateway,
+	customerRepository,
+	customerMagicLinkService,
+	confirmationEmailService,
+	emailService,
+	env.CUSTOMER_MAGIC_LINK_URL,
 );
 
 // --- Casos de uso: Autenticación ---

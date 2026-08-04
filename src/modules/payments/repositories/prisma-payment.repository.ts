@@ -12,6 +12,17 @@ import type {
 
 const RESERVATION_INCLUDE = {
 	items: true,
+	branch: {
+		select: {
+			name: true,
+			restaurant: {
+				select: {
+					name: true,
+					timezone: true,
+				},
+			},
+		},
+	},
 } as const;
 
 const SERIALIZABLE_RETRY_LIMIT = 3;

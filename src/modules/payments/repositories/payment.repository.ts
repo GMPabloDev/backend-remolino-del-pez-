@@ -17,7 +17,19 @@ export interface PaymentReservationContext {
 	status: ReservationStatus;
 	expiresAt: Date;
 	confirmedAt: Date | null;
+	fullName: string;
 	email: string;
+	phone: string;
+	partySize: number;
+	startAt: Date;
+	endAt: Date;
+	branch: {
+		name: string;
+		restaurant: {
+			name: string;
+			timezone: string;
+		};
+	};
 	checkoutTokenHash: string | null;
 	checkoutTokenVersion: string | null;
 	confirmedPaymentAttemptId: string | null;
