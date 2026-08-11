@@ -276,10 +276,7 @@ export class PrismaCustomerRepository implements CustomerRepository {
 								revokedAt: null,
 								expiresAt: { gt: data.now },
 							},
-							data: {
-								revokedAt: data.now,
-								replacedBySessionId: newSessionId,
-							},
+							data: { revokedAt: data.now },
 						});
 
 						if (revoked.count === 0) return null;
@@ -291,6 +288,11 @@ export class PrismaCustomerRepository implements CustomerRepository {
 								refreshTokenHash: data.refreshTokenHash,
 								expiresAt: data.expiresAt,
 							},
+						});
+
+						await tx.customerSession.update({
+							where: { id: currentSession.id },
+							data: { replacedBySessionId: session.id },
 						});
 
 						const customer = await tx.customer.findUnique({

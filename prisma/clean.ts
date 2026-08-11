@@ -5,8 +5,14 @@ async function clean(): Promise<void> {
 
 	await prisma.paymentWebhookEvent.deleteMany();
 	await prisma.reservationItem.deleteMany();
+	await prisma.customerMagicLink.deleteMany();
+	await prisma.reservation.updateMany({
+		data: { confirmedPaymentAttemptId: null },
+	});
 	await prisma.paymentAttempt.deleteMany();
 	await prisma.reservation.deleteMany();
+	await prisma.customerSession.deleteMany();
+	await prisma.customer.deleteMany();
 	await prisma.userSession.deleteMany();
 	await prisma.user.deleteMany();
 	await prisma.branchDish.deleteMany();
