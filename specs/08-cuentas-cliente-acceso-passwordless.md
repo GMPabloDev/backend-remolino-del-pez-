@@ -1,6 +1,6 @@
 # SPEC 08 — Cuentas de cliente y acceso passwordless
 
-> **Status:** Aprobado
+> **Status:** Implementado
 > **Depends on:** SPEC 05, SPEC 06, SPEC 07
 > **Supersedes:** SPEC 06 (vigencia del checkout token después de confirmar una reserva)
 > **Date:** 2026-08-04
