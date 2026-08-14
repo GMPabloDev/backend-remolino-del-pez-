@@ -7,6 +7,7 @@ export interface PaymentReceiptPdfItem {
 
 export interface PaymentReceiptPdfData {
 	number: string;
+	receiptType: "BOLETA" | "FACTURA";
 	restaurantName: string;
 	restaurantLegalName: string;
 	restaurantTaxId: string;
@@ -18,6 +19,10 @@ export interface PaymentReceiptPdfData {
 	customerName: string;
 	customerEmail: string;
 	customerPhone: string;
+	documentNumber: string | null;
+	invoiceRuc: string | null;
+	invoiceBusinessName: string | null;
+	invoiceAddress: string | null;
 	issuedAt: Date;
 	reservationStartAt: Date;
 	reservationEndAt: Date;

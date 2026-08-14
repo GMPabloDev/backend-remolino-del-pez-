@@ -11,6 +11,8 @@ const MARGIN = 42;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const ROW_HEIGHT = 22;
 const TABLE_HEADER_HEIGHT = 24;
+const NAVY = rgb(0.04, 0.1, 0.2);
+const GOLD = rgb(0.78, 0.56, 0.2);
 
 export class PdfLibPaymentReceiptService implements PaymentReceiptPdfService {
 	async generate(data: PaymentReceiptPdfData): Promise<Uint8Array> {
@@ -30,7 +32,7 @@ export class PdfLibPaymentReceiptService implements PaymentReceiptPdfService {
 		drawPageHeader(page, bold, data);
 		y -= 72;
 		drawSummary(page, regular, bold, data, y);
-		y -= 142;
+		y -= 174;
 		drawSectionTitle(page, bold, "Detalle de la reserva", y);
 		y -= 28;
 
@@ -73,12 +75,14 @@ function drawPageHeader(
 	font: PDFFont,
 	data: PaymentReceiptPdfData,
 ): void {
-	page.drawText("COMPROBANTE DE PAGO", {
+	const title =
+		data.receiptType === "FACTURA" ? "FACTURA DE VENTA" : "BOLETA DE VENTA";
+	page.drawText(title, {
 		x: MARGIN,
 		y: PAGE_HEIGHT - MARGIN,
 		font,
 		size: 18,
-		color: rgb(0.08, 0.1, 0.14),
+		color: NAVY,
 	});
 	page.drawText(data.number, {
 		x: PAGE_WIDTH - MARGIN - font.widthOfTextAtSize(data.number, 11),
@@ -90,8 +94,8 @@ function drawPageHeader(
 	page.drawLine({
 		start: { x: MARGIN, y: PAGE_HEIGHT - MARGIN - 14 },
 		end: { x: PAGE_WIDTH - MARGIN, y: PAGE_HEIGHT - MARGIN - 14 },
-		thickness: 1,
-		color: rgb(0.82, 0.84, 0.87),
+		thickness: 1.5,
+		color: GOLD,
 	});
 	page.drawText(data.restaurantName, {
 		x: MARGIN,
@@ -181,6 +185,46 @@ function drawSummary(
 		rightX,
 		y - 78,
 	);
+
+	if (data.receiptType === "FACTURA") {
+		drawLabelValue(
+			page,
+			regular,
+			bold,
+			"RUC",
+			data.invoiceRuc ?? "-",
+			leftX,
+			y - 104,
+		);
+		drawLabelValue(
+			page,
+			regular,
+			bold,
+			"Razón social",
+			data.invoiceBusinessName ?? "-",
+			rightX,
+			y - 104,
+		);
+		drawLabelValue(
+			page,
+			regular,
+			bold,
+			"Dirección fiscal",
+			data.invoiceAddress ?? "-",
+			leftX,
+			y - 130,
+		);
+	} else {
+		drawLabelValue(
+			page,
+			regular,
+			bold,
+			"DNI",
+			data.documentNumber ?? "-",
+			leftX,
+			y - 104,
+		);
+	}
 }
 
 function drawLabelValue(

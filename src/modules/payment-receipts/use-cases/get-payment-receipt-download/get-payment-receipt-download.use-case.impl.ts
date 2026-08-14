@@ -33,7 +33,10 @@ export class GetPaymentReceiptDownloadUseCaseImpl
 		}
 
 		const expiresAt = new Date(Date.now() + DOWNLOAD_WINDOW_MS);
-		const fileName = `comprobante-${formatReceiptNumber(receipt.sequence)}.pdf`;
+		const number = formatReceiptNumber(receipt.sequence, receipt.receiptType);
+		const documentName =
+			receipt.receiptType === "FACTURA" ? "factura" : "boleta";
+		const fileName = `${documentName}-${number}.pdf`;
 		let downloadUrl: string;
 
 		try {
@@ -50,6 +53,10 @@ export class GetPaymentReceiptDownloadUseCaseImpl
 	}
 }
 
-function formatReceiptNumber(sequence: number): string {
-	return `CP-${String(sequence).padStart(6, "0")}`;
+function formatReceiptNumber(
+	sequence: number,
+	receiptType: "BOLETA" | "FACTURA",
+): string {
+	const prefix = receiptType === "FACTURA" ? "F001" : "B001";
+	return `${prefix}-${String(sequence).padStart(6, "0")}`;
 }

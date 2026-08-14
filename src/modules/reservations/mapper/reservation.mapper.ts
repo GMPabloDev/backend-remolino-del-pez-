@@ -41,6 +41,18 @@ export function toTemporaryReservationDto(
 			email: reservation.email,
 			phone: reservation.phone,
 		},
+		billingDocument:
+			reservation.receiptType === "BOLETA"
+				? {
+						type: "BOLETA",
+						documentNumber: reservation.documentNumber,
+					}
+				: {
+						type: "FACTURA",
+						ruc: reservation.invoiceRuc,
+						businessName: reservation.invoiceBusinessName,
+						fiscalAddress: reservation.invoiceAddress,
+					},
 		items: reservation.items.map((item) => ({
 			dishId: item.dishId,
 			name: item.dishName,

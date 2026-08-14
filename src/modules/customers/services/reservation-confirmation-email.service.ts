@@ -13,6 +13,12 @@ export interface ReservationConfirmationEmailItem {
 export interface ReservationConfirmationEmailData {
 	to: string;
 	customerName: string;
+	receiptType: "BOLETA" | "FACTURA";
+	receiptNumber?: string;
+	documentNumber?: string | null;
+	invoiceRuc?: string | null;
+	invoiceBusinessName?: string | null;
+	invoiceAddress?: string | null;
 	restaurantName: string;
 	branchName: string;
 	startAt: Date;

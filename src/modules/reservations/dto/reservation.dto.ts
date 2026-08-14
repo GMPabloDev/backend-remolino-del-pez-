@@ -6,6 +6,15 @@ export interface ReservationCustomerDto {
 	phone: string;
 }
 
+export type ReservationBillingDocumentDto =
+	| { type: "BOLETA"; documentNumber: string | null }
+	| {
+			type: "FACTURA";
+			ruc: string | null;
+			businessName: string | null;
+			fiscalAddress: string | null;
+	  };
+
 export interface ReservationItemDto {
 	dishId: string;
 	name: string;
@@ -33,6 +42,7 @@ export interface TemporaryReservationDto {
 	expiresAt: string;
 	partySize: number;
 	customer: ReservationCustomerDto;
+	billingDocument: ReservationBillingDocumentDto;
 	items: ReservationItemDto[];
 	currency: string;
 	total: string;

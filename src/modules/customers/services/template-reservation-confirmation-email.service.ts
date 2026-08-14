@@ -5,15 +5,15 @@ import type {
 } from "./reservation-confirmation-email.service";
 
 const COLORS = {
-	background: "#f4f7fb",
+	background: "#f4f6fa",
 	panel: "#ffffff",
 	ink: "#172033",
 	muted: "#667085",
 	line: "#e6eaf0",
-	primary: "#0f766e",
-	primaryDark: "#115e59",
-	accent: "#f59e0b",
-	softPrimary: "#ecfdf5",
+	primary: "#b8862f",
+	primaryDark: "#0b1f3a",
+	accent: "#d4a64a",
+	softPrimary: "#eef3f9",
 } as const;
 
 export class TemplateReservationConfirmationEmailService
@@ -28,10 +28,11 @@ export class TemplateReservationConfirmationEmailService
 			data.timezone,
 		);
 		const currency = data.currency.toUpperCase();
+		const documentLabel = getDocumentLabel(data.receiptType);
 
 		return {
 			to: data.to,
-			subject: `Reserva confirmada en ${data.restaurantName}`,
+			subject: `${documentLabel} ${data.receiptNumber ?? "emitida"} · ${data.restaurantName}`,
 			text: buildTextBody(data, dateTime, currency),
 			html: buildHtmlBody(data, dateTime, currency, this.logoUrl),
 			attachments: data.attachment ? [data.attachment] : undefined,
@@ -44,6 +45,8 @@ function buildTextBody(
 	dateTime: ReservationDateTime,
 	currency: string,
 ): string {
+	const documentLabel = getDocumentLabel(data.receiptType);
+	const documentDetails = getDocumentDetails(data);
 	const items = data.items.length
 		? data.items
 				.map(
@@ -58,6 +61,8 @@ function buildTextBody(
 		"",
 		`Tu reserva en ${data.restaurantName} está confirmada.`,
 		"El pago fue procesado correctamente.",
+		`${documentLabel} ${data.receiptNumber ?? ""} generada correctamente.`,
+		...documentDetails,
 		"",
 		"Resumen de tu reserva:",
 		`- Sucursal: ${data.branchName}`,
@@ -84,6 +89,10 @@ function buildHtmlBody(
 	currency: string,
 	logoUrl?: string,
 ): string {
+	const documentLabel = getDocumentLabel(data.receiptType);
+	const documentDetails = getDocumentDetails(data)
+		.map((detail) => escapeHtml(detail))
+		.join(" · ");
 	const items = data.items.length
 		? data.items
 				.map(
@@ -111,19 +120,20 @@ function buildHtmlBody(
 						<table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
 							<td width="76" valign="top">${logo}</td>
 							<td valign="middle" style="padding-left:16px;color:#ffffff;">
-								<div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#a7f3d0;font-weight:700;">${escapeHtml(data.restaurantName)}</div>
-								<div style="font-size:27px;line-height:34px;font-weight:700;margin-top:5px;">Reserva confirmada</div>
+								<div style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:${COLORS.accent};font-weight:700;">${escapeHtml(data.restaurantName)}</div>
+								<div style="font-size:27px;line-height:34px;font-weight:700;margin-top:5px;">${documentLabel} emitida</div>
 							</td>
 						</tr></table>
 					</td></tr>
 					<tr><td style="padding:34px 34px 10px;">
 						<p style="margin:0 0 10px;font-size:17px;font-weight:700;color:${COLORS.ink};">Hola ${escapeHtml(data.customerName)},</p>
-						<p style="margin:0;color:${COLORS.muted};font-size:15px;line-height:24px;">Tu reserva está lista. Hemos confirmado tu pago y guardado todos los detalles para tu visita.</p>
+						<p style="margin:0;color:${COLORS.muted};font-size:15px;line-height:24px;">Tu reserva está lista. Hemos confirmado tu pago y generado tu ${documentLabel.toLowerCase()}${data.receiptNumber ? ` <strong>${escapeHtml(data.receiptNumber)}</strong>` : ""}.</p>
+						<div style="margin-top:14px;padding:12px 15px;background:${COLORS.softPrimary};border-left:4px solid ${COLORS.accent};border-radius:8px;color:${COLORS.ink};font-size:13px;">${documentDetails}</div>
 					</td></tr>
 					<tr><td style="padding:20px 34px 8px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
 						<td style="background:${COLORS.softPrimary};border-radius:14px;padding:17px 18px;width:50%;"><div style="font-size:11px;color:${COLORS.primary};font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Fecha y hora</div><div style="font-size:15px;font-weight:700;color:${COLORS.ink};margin-top:6px;">${escapeHtml(dateTime.date)}</div><div style="font-size:13px;color:${COLORS.muted};margin-top:3px;">${escapeHtml(dateTime.time)}</div></td>
 						<td width="12"></td>
-						<td style="background:#fff7e6;border-radius:14px;padding:17px 18px;width:50%;"><div style="font-size:11px;color:#b45309;font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Sucursal</div><div style="font-size:15px;font-weight:700;color:${COLORS.ink};margin-top:6px;">${escapeHtml(data.branchName)}</div><div style="font-size:13px;color:${COLORS.muted};margin-top:3px;">${data.partySize} personas</div></td>
+						<td style="background:#fff8eb;border-radius:14px;padding:17px 18px;width:50%;"><div style="font-size:11px;color:${COLORS.primary};font-weight:700;text-transform:uppercase;letter-spacing:.6px;">Sucursal</div><div style="font-size:15px;font-weight:700;color:${COLORS.ink};margin-top:6px;">${escapeHtml(data.branchName)}</div><div style="font-size:13px;color:${COLORS.muted};margin-top:3px;">${data.partySize} personas</div></td>
 					</tr></table></td></tr>
 					<tr><td style="padding:20px 34px 10px;"><div style="font-size:18px;font-weight:700;color:${COLORS.ink};margin-bottom:10px;">Detalle de consumo</div><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><thead><tr><th style="padding:9px 0;text-align:left;border-bottom:2px solid ${COLORS.line};font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:${COLORS.muted};">Plato</th><th style="padding:9px 0;text-align:center;border-bottom:2px solid ${COLORS.line};font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:${COLORS.muted};">Cant.</th><th style="padding:9px 0;text-align:right;border-bottom:2px solid ${COLORS.line};font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:${COLORS.muted};">Subtotal</th></tr></thead><tbody>${items}</tbody></table></td></tr>
 					<tr><td style="padding:8px 34px 10px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td style="font-size:14px;color:${COLORS.muted};">Total pagado</td><td align="right" style="font-size:23px;font-weight:700;color:${COLORS.primary};">${currency} ${escapeHtml(data.total)}</td></tr></table></td></tr>
@@ -134,6 +144,22 @@ function buildHtmlBody(
 		</table>
 	</body>
 </html>`;
+}
+
+function getDocumentLabel(receiptType: "BOLETA" | "FACTURA"): string {
+	return receiptType === "FACTURA" ? "Factura" : "Boleta";
+}
+
+function getDocumentDetails(data: ReservationConfirmationEmailData): string[] {
+	if (data.receiptType === "FACTURA") {
+		return [
+			`RUC: ${data.invoiceRuc ?? "No especificado"}`,
+			`Razón social: ${data.invoiceBusinessName ?? "No especificada"}`,
+			`Dirección fiscal: ${data.invoiceAddress ?? "No especificada"}`,
+		];
+	}
+
+	return [`DNI: ${data.documentNumber ?? "No especificado"}`];
 }
 
 interface ReservationDateTime {

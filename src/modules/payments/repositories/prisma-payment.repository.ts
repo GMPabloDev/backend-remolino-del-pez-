@@ -264,6 +264,11 @@ export class PrismaPaymentRepository implements PaymentRepository {
 							data: {
 								reservationId,
 								paymentAttemptId: attemptId,
+								receiptType: reservation.receiptType,
+								documentNumber: reservation.documentNumber,
+								invoiceRuc: reservation.invoiceRuc,
+								invoiceBusinessName: reservation.invoiceBusinessName,
+								invoiceAddress: reservation.invoiceAddress,
 								restaurantName: reservation.branch.restaurant.name,
 								restaurantLegalName: reservation.branch.restaurant.legalName,
 								restaurantTaxId: reservation.branch.restaurant.taxId,

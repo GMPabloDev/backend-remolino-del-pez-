@@ -24,13 +24,19 @@ export class ProcessPaymentReceiptUseCaseImpl
 		const context = await this.receiptRepository.findById(receiptId);
 		if (!context) return null;
 
-		const number = formatReceiptNumber(context.receipt.sequence);
-		const fileName = `comprobante-${number}.pdf`;
+		const number = formatReceiptNumber(
+			context.receipt.sequence,
+			context.receipt.receiptType,
+		);
+		const documentName =
+			context.receipt.receiptType === "FACTURA" ? "factura" : "boleta";
+		const fileName = `${documentName}-${number}.pdf`;
 		let content: Uint8Array;
 
 		try {
 			const data: PaymentReceiptPdfData = {
 				number,
+				receiptType: context.receipt.receiptType,
 				restaurantName: context.receipt.restaurantName,
 				restaurantLegalName: context.receipt.restaurantLegalName,
 				restaurantTaxId: context.receipt.restaurantTaxId,
@@ -42,6 +48,10 @@ export class ProcessPaymentReceiptUseCaseImpl
 				customerName: context.receipt.customerName,
 				customerEmail: context.receipt.customerEmail,
 				customerPhone: context.receipt.customerPhone,
+				documentNumber: context.receipt.documentNumber,
+				invoiceRuc: context.receipt.invoiceRuc,
+				invoiceBusinessName: context.receipt.invoiceBusinessName,
+				invoiceAddress: context.receipt.invoiceAddress,
 				issuedAt: context.receipt.issuedAt,
 				reservationStartAt: context.reservation.startAt,
 				reservationEndAt: context.reservation.endAt,
@@ -65,7 +75,7 @@ export class ProcessPaymentReceiptUseCaseImpl
 		try {
 			const stored = await this.storageService.uploadPdf(
 				content,
-				`payment-receipts/comprobante-${number}`,
+				`payment-receipts/${documentName}-${number}`,
 			);
 			await this.receiptRepository.markAvailable(receiptId, {
 				storagePublicId: stored.publicId,
@@ -89,6 +99,10 @@ export class ProcessPaymentReceiptUseCaseImpl
 	}
 }
 
-export function formatReceiptNumber(sequence: number): string {
-	return `CP-${String(sequence).padStart(6, "0")}`;
+export function formatReceiptNumber(
+	sequence: number,
+	receiptType: "BOLETA" | "FACTURA" = "BOLETA",
+): string {
+	const prefix = receiptType === "FACTURA" ? "F001" : "B001";
+	return `${prefix}-${String(sequence).padStart(6, "0")}`;
 }

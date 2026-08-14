@@ -75,6 +75,11 @@ enum PaymentReceiptStatus {
   FAILED
 }
 
+enum ReceiptType {
+  BOLETA
+  FACTURA
+}
+
 enum CustomerMagicLinkSource {
   RESERVATION_CONFIRMATION
   ACCESS_REQUEST
@@ -271,6 +276,11 @@ model Reservation {
   fullName                  String            @db.VarChar(150)
   email                     String            @db.VarChar(320)
   phone                     String            @db.VarChar(16)
+  receiptType               ReceiptType       @default(BOLETA)
+  documentNumber            String?           @db.VarChar(20)
+  invoiceRuc                String?           @db.VarChar(11)
+  invoiceBusinessName       String?           @db.VarChar(200)
+  invoiceAddress            String?           @db.VarChar(250)
   partySize                 Int
   startAt                   DateTime          @db.Timestamptz(3)
   endAt                     DateTime          @db.Timestamptz(3)
@@ -407,6 +417,7 @@ model PaymentReceipt {
   reservationId       String               @unique @db.Uuid
   paymentAttemptId    String               @unique @db.Uuid
   status              PaymentReceiptStatus @default(PENDING)
+  receiptType         ReceiptType          @default(BOLETA)
   restaurantName      String               @db.VarChar(150)
   restaurantLegalName String               @db.VarChar(200)
   restaurantTaxId     String               @db.VarChar(11)
@@ -418,6 +429,10 @@ model PaymentReceipt {
   customerName        String               @db.VarChar(150)
   customerEmail       String               @db.VarChar(320)
   customerPhone       String               @db.VarChar(16)
+  documentNumber      String?              @db.VarChar(20)
+  invoiceRuc          String?              @db.VarChar(11)
+  invoiceBusinessName String?              @db.VarChar(200)
+  invoiceAddress      String?              @db.VarChar(250)
   currency            String               @db.Char(3)
   total               Decimal              @db.Decimal(10, 2)
   issuedAt            DateTime             @db.Timestamptz(3)

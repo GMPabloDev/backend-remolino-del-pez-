@@ -33,7 +33,11 @@ export function toCustomerReservationDto(
 		).toISOString(),
 		receipt: reservation.paymentReceipt
 			? {
-					number: formatReceiptNumber(reservation.paymentReceipt.sequence),
+					type: reservation.paymentReceipt.receiptType,
+					number: formatReceiptNumber(
+						reservation.paymentReceipt.sequence,
+						reservation.paymentReceipt.receiptType,
+					),
 					status: reservation.paymentReceipt.status.toLowerCase() as
 						| "pending"
 						| "available"
@@ -45,6 +49,10 @@ export function toCustomerReservationDto(
 	};
 }
 
-function formatReceiptNumber(sequence: number): string {
-	return `CP-${String(sequence).padStart(6, "0")}`;
+function formatReceiptNumber(
+	sequence: number,
+	receiptType: "BOLETA" | "FACTURA",
+): string {
+	const prefix = receiptType === "FACTURA" ? "F001" : "B001";
+	return `${prefix}-${String(sequence).padStart(6, "0")}`;
 }

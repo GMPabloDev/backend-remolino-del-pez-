@@ -7,6 +7,7 @@ export interface CustomerReservationItemDto {
 }
 
 export interface CustomerReservationReceiptDto {
+	type: "BOLETA" | "FACTURA";
 	number: string;
 	status: "pending" | "available" | "failed";
 	generatedAt: string | null;

@@ -40,6 +40,29 @@ const customerSchema = z
 	})
 	.strict();
 
+const billingDocumentSchema = z.discriminatedUnion("type", [
+	z
+		.object({
+			type: z.literal("BOLETA"),
+			documentNumber: z
+				.string()
+				.trim()
+				.regex(/^\d{8}$/, "El DNI debe tener 8 dígitos"),
+		})
+		.strict(),
+	z
+		.object({
+			type: z.literal("FACTURA"),
+			ruc: z
+				.string()
+				.trim()
+				.regex(/^\d{11}$/, "El RUC debe tener 11 dígitos"),
+			businessName: z.string().trim().min(2).max(200),
+			fiscalAddress: z.string().trim().min(5).max(250),
+		})
+		.strict(),
+]);
+
 const itemsSchema = z
 	.array(
 		z
@@ -76,6 +99,7 @@ export const createTemporaryReservationSchema = z
 		time: timeSchema,
 		partySize: z.number().int().positive(),
 		customer: customerSchema,
+		billingDocument: billingDocumentSchema,
 		items: itemsSchema,
 	})
 	.strict();

@@ -9,6 +9,7 @@ async function clean(): Promise<void> {
 	await prisma.reservation.updateMany({
 		data: { confirmedPaymentAttemptId: null },
 	});
+	await prisma.paymentReceipt.deleteMany();
 	await prisma.paymentAttempt.deleteMany();
 	await prisma.reservation.deleteMany();
 	await prisma.customerSession.deleteMany();

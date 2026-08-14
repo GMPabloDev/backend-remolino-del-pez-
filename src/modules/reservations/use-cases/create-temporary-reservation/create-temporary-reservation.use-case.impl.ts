@@ -148,6 +148,23 @@ export class CreateTemporaryReservationUseCaseImpl
 				fullName: normalizedInput.customer.fullName,
 				email: normalizedInput.customer.email,
 				phone: normalizedInput.customer.phone,
+				receiptType: normalizedInput.billingDocument.type,
+				documentNumber:
+					normalizedInput.billingDocument.type === "BOLETA"
+						? normalizedInput.billingDocument.documentNumber
+						: null,
+				invoiceRuc:
+					normalizedInput.billingDocument.type === "FACTURA"
+						? normalizedInput.billingDocument.ruc
+						: null,
+				invoiceBusinessName:
+					normalizedInput.billingDocument.type === "FACTURA"
+						? normalizedInput.billingDocument.businessName
+						: null,
+				invoiceAddress:
+					normalizedInput.billingDocument.type === "FACTURA"
+						? normalizedInput.billingDocument.fiscalAddress
+						: null,
 				partySize: normalizedInput.partySize,
 				startAt,
 				endAt,

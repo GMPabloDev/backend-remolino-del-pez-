@@ -20,6 +20,11 @@ export interface PaymentReservationContext {
 	fullName: string;
 	email: string;
 	phone: string;
+	receiptType: "BOLETA" | "FACTURA";
+	documentNumber: string | null;
+	invoiceRuc: string | null;
+	invoiceBusinessName: string | null;
+	invoiceAddress: string | null;
 	partySize: number;
 	startAt: Date;
 	endAt: Date;

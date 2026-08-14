@@ -219,6 +219,11 @@ export class ProcessStripeWebhookUseCaseImpl
 			const message = this.confirmationEmailService.create({
 				to: reservation.email,
 				customerName: reservation.fullName,
+				receiptType: reservation.receiptType,
+				receiptNumber: receipt?.number,
+				documentNumber: reservation.documentNumber,
+				invoiceRuc: reservation.invoiceRuc,
+				invoiceBusinessName: reservation.invoiceBusinessName,
 				restaurantName: reservation.branch.restaurant.name,
 				branchName: reservation.branch.name,
 				startAt: reservation.startAt,
