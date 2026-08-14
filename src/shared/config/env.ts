@@ -30,6 +30,17 @@ const envSchema = z
 		SMTP_PASS: z.string().min(1),
 		SMTP_FROM_NAME: z.string().min(1),
 		SMTP_FROM_EMAIL: z.string().email(),
+		EMAIL_LOGO_URL: z
+			.string()
+			.url()
+			.refine((value) => {
+				const url = new URL(value);
+				return (
+					url.protocol === "https:" ||
+					(url.protocol === "http:" && url.hostname === "localhost")
+				);
+			}, "debe usar HTTPS, excepto en localhost")
+			.optional(),
 		CLOUDINARY_CLOUD_NAME: z.string().min(1),
 		CLOUDINARY_API_KEY: z.string().min(1),
 		CLOUDINARY_API_SECRET: z.string().min(1),

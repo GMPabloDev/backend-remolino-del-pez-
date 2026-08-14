@@ -135,8 +135,10 @@ const checkoutTokenService = new HmacCheckoutTokenService(env);
 const customerMagicLinkService = new CryptoCustomerMagicLinkService();
 const customerTokenService = new JwtCustomerTokenService(env);
 const confirmationEmailService =
-	new TemplateReservationConfirmationEmailService();
-const customerAccessEmailService = new TemplateCustomerAccessEmailService();
+	new TemplateReservationConfirmationEmailService(env.EMAIL_LOGO_URL);
+const customerAccessEmailService = new TemplateCustomerAccessEmailService(
+	env.EMAIL_LOGO_URL,
+);
 const emailService = new NodemailerEmailService(env);
 const documentStorageService = new CloudinaryDocumentStorageService(env);
 const paymentReceiptPdfService = new PdfLibPaymentReceiptService();

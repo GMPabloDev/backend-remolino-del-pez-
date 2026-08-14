@@ -44,6 +44,7 @@ bun run seed           # Crear el administrador inicial
 | `SMTP_PASS` | Contraseña de aplicación SMTP; nunca la contraseña principal | Sí |
 | `SMTP_FROM_NAME` | Nombre visible del remitente | Sí |
 | `SMTP_FROM_EMAIL` | Email autorizado del remitente | Sí |
+| `EMAIL_LOGO_URL` | URL HTTPS opcional del logo usado en los correos | No |
 | `CLOUDINARY_CLOUD_NAME` | Nombre del cloud de Cloudinary para almacenar comprobantes PDF | Sí |
 | `CLOUDINARY_API_KEY` | API key de Cloudinary | Sí |
 | `CLOUDINARY_API_SECRET` | API secret de Cloudinary | Sí |
@@ -215,6 +216,8 @@ Requiere autenticación de cliente. Devuelve una URL firmada de Cloudinary con c
 ```
 
 El comprobante también se adjunta al correo de confirmación. Las credenciales de Cloudinary nunca se exponen ni se guardan en URLs persistentes.
+
+`EMAIL_LOGO_URL` es opcional. Si se configura con una URL HTTPS de Cloudinary, el logo aparece en las plantillas de confirmación y acceso. Si se omite, se muestra una marca visual alternativa.
 
 ### POST /auth/refresh
 
