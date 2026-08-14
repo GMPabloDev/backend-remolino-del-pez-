@@ -15,9 +15,15 @@ const RESERVATION_INCLUDE = {
 	branch: {
 		select: {
 			name: true,
+			address: true,
+			district: true,
+			province: true,
+			department: true,
 			restaurant: {
 				select: {
 					name: true,
+					legalName: true,
+					taxId: true,
 					timezone: true,
 				},
 			},
@@ -162,7 +168,26 @@ export class PrismaPaymentRepository implements PaymentRepository {
 					async (tx) => {
 						const reservation = await tx.reservation.findUnique({
 							where: { id: reservationId },
-							include: { branch: { select: { restaurantId: true } } },
+							include: {
+								branch: {
+									select: {
+										restaurantId: true,
+										name: true,
+										address: true,
+										district: true,
+										province: true,
+										department: true,
+										restaurant: {
+											select: {
+												name: true,
+												legalName: true,
+												taxId: true,
+												timezone: true,
+											},
+										},
+									},
+								},
+							},
 						});
 
 						// Solo confirma si está PENDING_PAYMENT, no vencida y no tiene otro intento confirmado
@@ -235,6 +260,27 @@ export class PrismaPaymentRepository implements PaymentRepository {
 							}
 						}
 
+						const receipt = await tx.paymentReceipt.create({
+							data: {
+								reservationId,
+								paymentAttemptId: attemptId,
+								restaurantName: reservation.branch.restaurant.name,
+								restaurantLegalName: reservation.branch.restaurant.legalName,
+								restaurantTaxId: reservation.branch.restaurant.taxId,
+								branchName: reservation.branch.name,
+								branchAddress: reservation.branch.address,
+								branchDistrict: reservation.branch.district,
+								branchProvince: reservation.branch.province,
+								branchDepartment: reservation.branch.department,
+								customerName: customer?.fullName ?? reservation.fullName,
+								customerEmail: customer?.email ?? reservation.email,
+								customerPhone: customer?.phone ?? reservation.phone,
+								currency: reservation.currency,
+								total: reservation.total,
+								issuedAt: paidAt,
+							},
+						});
+
 						await tx.reservation.update({
 							where: { id: reservationId },
 							data: {
@@ -259,6 +305,7 @@ export class PrismaPaymentRepository implements PaymentRepository {
 							attemptId,
 							customerId,
 							magicLinkId,
+							receiptId: receipt.id,
 						};
 					},
 					{

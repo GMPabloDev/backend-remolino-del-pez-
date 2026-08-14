@@ -3,6 +3,7 @@ import type { EmailService } from "../../../../shared/email/email.service";
 import type { CustomerMagicLinkService } from "../../../customer-auth/services/customer-magic-link.service";
 import type { CustomerRepository } from "../../../customers/repositories/customer.repository";
 import type { ReservationConfirmationEmailService } from "../../../customers/services/reservation-confirmation-email.service";
+import type { ProcessPaymentReceiptUseCase } from "../../../payment-receipts/use-cases/process-payment-receipt/process-payment-receipt.use-case";
 import type {
 	PaymentRepository,
 	PaymentReservationContext,
@@ -43,6 +44,7 @@ export class ProcessStripeWebhookUseCaseImpl
 		private readonly customerMagicLinkService: CustomerMagicLinkService,
 		private readonly confirmationEmailService: ReservationConfirmationEmailService,
 		private readonly emailService: EmailService,
+		private readonly paymentReceiptUseCase: ProcessPaymentReceiptUseCase,
 		private readonly customerMagicLinkUrl: string,
 	) {}
 
@@ -195,11 +197,14 @@ export class ProcessStripeWebhookUseCaseImpl
 			return;
 		}
 
+		const receipt = await this.processPaymentReceipt(confirmed.receiptId);
+
 		if (confirmed.magicLinkId) {
 			await this.sendReservationConfirmationEmail(
 				reservation,
 				confirmed.magicLinkId,
 				magicLink.token,
+				receipt,
 			);
 		}
 	}
@@ -208,6 +213,7 @@ export class ProcessStripeWebhookUseCaseImpl
 		reservation: PaymentReservationContext,
 		magicLinkId: string,
 		token: string,
+		receipt: Awaited<ReturnType<ProcessPaymentReceiptUseCase["execute"]>>,
 	): Promise<void> {
 		try {
 			const message = this.confirmationEmailService.create({
@@ -228,6 +234,13 @@ export class ProcessStripeWebhookUseCaseImpl
 				currency: reservation.currency,
 				total: reservation.total.toFixed(2),
 				accessUrl: buildMagicLinkUrl(this.customerMagicLinkUrl, token),
+				attachment: receipt?.content
+					? {
+							filename: receipt.fileName,
+							content: receipt.content,
+							contentType: "application/pdf",
+						}
+					: undefined,
 			});
 
 			await this.emailService.send(message);
@@ -242,6 +255,16 @@ export class ProcessStripeWebhookUseCaseImpl
 			} catch {
 				// El fallo de persistencia no debe revertir el pago confirmado.
 			}
+		}
+	}
+
+	private async processPaymentReceipt(
+		receiptId: string,
+	): Promise<Awaited<ReturnType<ProcessPaymentReceiptUseCase["execute"]>>> {
+		try {
+			return await this.paymentReceiptUseCase.execute(receiptId);
+		} catch {
+			return null;
 		}
 	}
 

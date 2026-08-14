@@ -47,6 +47,11 @@ import { UpdateCategoryStatusUseCaseImpl } from "./modules/menu/use-cases/update
 import { UpdateDishUseCaseImpl } from "./modules/menu/use-cases/update-dish/update-dish.use-case.impl";
 import { UpdateDishStatusUseCaseImpl } from "./modules/menu/use-cases/update-dish-status/update-dish-status.use-case.impl";
 import { UpsertBranchDishUseCaseImpl } from "./modules/menu/use-cases/upsert-branch-dish/upsert-branch-dish.use-case.impl";
+import { PrismaPaymentReceiptRepository } from "./modules/payment-receipts/repositories/prisma-payment-receipt.repository";
+import { createPaymentReceiptRouter } from "./modules/payment-receipts/router";
+import { PdfLibPaymentReceiptService } from "./modules/payment-receipts/services/pdf-lib-payment-receipt.service";
+import { GetPaymentReceiptDownloadUseCaseImpl } from "./modules/payment-receipts/use-cases/get-payment-receipt-download/get-payment-receipt-download.use-case.impl";
+import { ProcessPaymentReceiptUseCaseImpl } from "./modules/payment-receipts/use-cases/process-payment-receipt/process-payment-receipt.use-case.impl";
 import { PrismaPaymentRepository } from "./modules/payments/repositories/prisma-payment.repository";
 import { createPaymentRouter } from "./modules/payments/router";
 import { StripePaymentGatewayService } from "./modules/payments/services/stripe-payment-gateway.service";
@@ -54,11 +59,13 @@ import { CreateCheckoutUseCaseImpl } from "./modules/payments/use-cases/create-c
 import { GetPaymentStatusUseCaseImpl } from "./modules/payments/use-cases/get-payment-status/get-payment-status.use-case.impl";
 import { ProcessStripeWebhookUseCaseImpl } from "./modules/payments/use-cases/process-stripe-webhook/process-stripe-webhook.use-case.impl";
 import { createStripeWebhookRouter } from "./modules/payments/webhook.router";
+import { createCustomerReservationRouter } from "./modules/reservations/customer.router";
 import { PrismaReservationRepository } from "./modules/reservations/repositories/prisma-reservation.repository";
 import { createReservationRouter } from "./modules/reservations/router";
 import { HmacCheckoutTokenService } from "./modules/reservations/services/hmac-checkout-token.service";
 import { CreateTemporaryReservationUseCaseImpl } from "./modules/reservations/use-cases/create-temporary-reservation/create-temporary-reservation.use-case.impl";
 import { GetAvailabilityUseCaseImpl } from "./modules/reservations/use-cases/get-availability/get-availability.use-case.impl";
+import { ListCustomerReservationsUseCaseImpl } from "./modules/reservations/use-cases/list-customer-reservations/list-customer-reservations.use-case.impl";
 import { createPublicRestaurantRouter } from "./modules/restaurants/public.router";
 import { PrismaRestaurantRepository } from "./modules/restaurants/repositories/prisma-restaurant.repository";
 import { createRestaurantRouter } from "./modules/restaurants/router";
@@ -86,6 +93,7 @@ import { NodemailerEmailService } from "./shared/email/nodemailer-email.service"
 import { errorHandler } from "./shared/errors/error-handler";
 import { BunPasswordService } from "./shared/security/bun-password.service";
 import { JwtTokenService } from "./shared/security/jwt-token.service";
+import { CloudinaryDocumentStorageService } from "./shared/storage/cloudinary-document-storage.service";
 
 const app = new Hono();
 
@@ -130,7 +138,8 @@ const confirmationEmailService =
 	new TemplateReservationConfirmationEmailService();
 const customerAccessEmailService = new TemplateCustomerAccessEmailService();
 const emailService = new NodemailerEmailService(env);
-
+const documentStorageService = new CloudinaryDocumentStorageService(env);
+const paymentReceiptPdfService = new PdfLibPaymentReceiptService();
 // --- Repositorios ---
 const restaurantRepository = new PrismaRestaurantRepository();
 const branchRepository = new PrismaBranchRepository();
@@ -140,6 +149,7 @@ const dishRepository = new PrismaDishRepository();
 const branchDishRepository = new PrismaBranchDishRepository();
 const reservationRepository = new PrismaReservationRepository();
 const paymentRepository = new PrismaPaymentRepository();
+const paymentReceiptRepository = new PrismaPaymentReceiptRepository();
 const customerRepository = new PrismaCustomerRepository();
 const userRepository = new PrismaUserRepository();
 const authRepository = new PrismaAuthRepository();
@@ -292,6 +302,9 @@ const createTemporaryReservation = new CreateTemporaryReservationUseCaseImpl(
 	reservationRepository,
 	checkoutTokenService,
 );
+const listCustomerReservations = new ListCustomerReservationsUseCaseImpl(
+	reservationRepository,
+);
 
 // --- Servicios de pago ---
 const paymentGateway = new StripePaymentGatewayService(env);
@@ -309,6 +322,11 @@ const processStripeWebhook = new ProcessStripeWebhookUseCaseImpl(
 	customerMagicLinkService,
 	confirmationEmailService,
 	emailService,
+	new ProcessPaymentReceiptUseCaseImpl(
+		paymentReceiptRepository,
+		paymentReceiptPdfService,
+		documentStorageService,
+	),
 	env.CUSTOMER_MAGIC_LINK_URL,
 );
 
@@ -350,6 +368,10 @@ const logoutCustomerSession = new LogoutCustomerSessionUseCaseImpl(
 );
 const getCurrentCustomer = new GetCurrentCustomerUseCaseImpl(
 	customerRepository,
+);
+const getPaymentReceiptDownload = new GetPaymentReceiptDownloadUseCaseImpl(
+	paymentReceiptRepository,
+	documentStorageService,
 );
 
 // --- Rutas ---
@@ -493,6 +515,24 @@ app.route(
 );
 
 // --- Rutas: Pagos públicos ---
+app.route(
+	"/",
+	createCustomerReservationRouter({
+		listCustomerReservations,
+		customerTokenService,
+		customerRepository,
+	}),
+);
+
+app.route(
+	"/",
+	createPaymentReceiptRouter({
+		getPaymentReceiptDownload,
+		customerTokenService,
+		customerRepository,
+	}),
+);
+
 app.route(
 	"/public/restaurants/:restaurantSlug/branches/:branchSlug",
 	createPaymentRouter({

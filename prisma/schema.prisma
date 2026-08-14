@@ -69,6 +69,12 @@ enum PaymentWebhookStatus {
   FAILED
 }
 
+enum PaymentReceiptStatus {
+  PENDING
+  AVAILABLE
+  FAILED
+}
+
 enum CustomerMagicLinkSource {
   RESERVATION_CONFIRMATION
   ACCESS_REQUEST
@@ -285,6 +291,7 @@ model Reservation {
   customerId                 String?           @db.Uuid
   customer                   Customer?         @relation(fields: [customerId], references: [id], onDelete: Restrict)
   customerMagicLink          CustomerMagicLink?
+  paymentReceipt             PaymentReceipt?
 
   @@index([branchId, status, startAt, endAt])
   @@index([tableId, status, startAt, endAt])
@@ -387,9 +394,44 @@ model PaymentAttempt {
   updatedAt                 DateTime             @updatedAt
   reservation               Reservation          @relation(fields: [reservationId], references: [id], onDelete: Restrict)
   confirmedReservation      Reservation?         @relation("ConfirmedPaymentAttempt")
+  paymentReceipt             PaymentReceipt?
 
   @@index([reservationId, createdAt])
   @@index([provider, status])
+  @@index([status, updatedAt])
+}
+
+model PaymentReceipt {
+  id                  String               @id @default(uuid()) @db.Uuid
+  sequence            Int                  @unique @default(autoincrement())
+  reservationId       String               @unique @db.Uuid
+  paymentAttemptId    String               @unique @db.Uuid
+  status              PaymentReceiptStatus @default(PENDING)
+  restaurantName      String               @db.VarChar(150)
+  restaurantLegalName String               @db.VarChar(200)
+  restaurantTaxId     String               @db.VarChar(11)
+  branchName          String               @db.VarChar(150)
+  branchAddress       String               @db.VarChar(250)
+  branchDistrict      String               @db.VarChar(100)
+  branchProvince      String               @db.VarChar(100)
+  branchDepartment    String               @db.VarChar(100)
+  customerName        String               @db.VarChar(150)
+  customerEmail       String               @db.VarChar(320)
+  customerPhone       String               @db.VarChar(16)
+  currency            String               @db.Char(3)
+  total               Decimal              @db.Decimal(10, 2)
+  issuedAt            DateTime             @db.Timestamptz(3)
+  storagePublicId     String?              @unique @db.VarChar(255)
+  storageVersion      String?              @db.VarChar(50)
+  storageBytes        Int?
+  generatedAt         DateTime?            @db.Timestamptz(3)
+  failedAt            DateTime?            @db.Timestamptz(3)
+  lastErrorCode       String?              @db.VarChar(100)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  reservation         Reservation          @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  paymentAttempt      PaymentAttempt       @relation(fields: [paymentAttemptId], references: [id], onDelete: Restrict)
+
   @@index([status, updatedAt])
 }
 

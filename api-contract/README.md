@@ -28,6 +28,7 @@ Este contrato está dividido por consumidor para que cada frontend solo copie su
 | `POST .../reservations/:id/checkout` · `GET .../reservations/:id/payment` | [01-publico.md](./01-publico.md) |
 | `POST /public/restaurants/:rslug/customer-auth/magic-links` · `POST /public/customer-auth/magic-links/exchange` | [01-publico.md](./01-publico.md) |
 | `POST /customer-auth/refresh` · `POST /customer-auth/logout` · `GET /customer-auth/me` | [01-publico.md](./01-publico.md) |
+| `GET /customer/reservations` · `GET /customer/reservations/:id/receipt/download` | [01-publico.md](./01-publico.md) |
 | `POST /webhooks/stripe` | [01-publico.md](./01-publico.md#post-webhooksstripe) |
 | `GET /` (health) | [01-publico.md](./01-publico.md#get--health) |
 

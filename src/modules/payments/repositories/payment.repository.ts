@@ -25,8 +25,14 @@ export interface PaymentReservationContext {
 	endAt: Date;
 	branch: {
 		name: string;
+		address: string;
+		district: string;
+		province: string;
+		department: string;
 		restaurant: {
 			name: string;
+			legalName: string;
+			taxId: string;
 			timezone: string;
 		};
 	};
@@ -66,6 +72,7 @@ export interface ConfirmPaymentResult {
 	attemptId: string;
 	customerId: string | null;
 	magicLinkId: string | null;
+	receiptId: string;
 }
 
 // --- Datos de actualización de intento ---

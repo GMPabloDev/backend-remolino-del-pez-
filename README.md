@@ -9,6 +9,7 @@ API para la gestión de restaurantes, sucursales y usuarios internos.
 - **ORM:** Prisma Client + PostgreSQL (Neon)
 - **Validación:** Zod v4 + @hono/standard-validator
 - **Autenticación:** JWT interno y de clientes + refresh tokens rotativos (jose)
+- **Documentos:** PDF con `pdf-lib` y almacenamiento restringido en Cloudinary
 
 ## Requisitos
 
@@ -43,6 +44,9 @@ bun run seed           # Crear el administrador inicial
 | `SMTP_PASS` | Contraseña de aplicación SMTP; nunca la contraseña principal | Sí |
 | `SMTP_FROM_NAME` | Nombre visible del remitente | Sí |
 | `SMTP_FROM_EMAIL` | Email autorizado del remitente | Sí |
+| `CLOUDINARY_CLOUD_NAME` | Nombre del cloud de Cloudinary para almacenar comprobantes PDF | Sí |
+| `CLOUDINARY_API_KEY` | API key de Cloudinary | Sí |
+| `CLOUDINARY_API_SECRET` | API secret de Cloudinary | Sí |
 
 ## Desarrollo
 
@@ -193,6 +197,24 @@ Requiere `Authorization: Bearer <customerAccessToken>`.
 No lista reservas ni pagos.
 
 **Errores:** `401 CUSTOMER_AUTH_REQUIRED`.
+
+### GET /customer/reservations
+
+Requiere `Authorization: Bearer <customerAccessToken>` y devuelve todas las reservas confirmadas del cliente autenticado, incluyendo sus items y el estado del comprobante. Devuelve `200 []` cuando no existen reservas.
+
+### GET /customer/reservations/:reservationId/receipt/download
+
+Requiere autenticación de cliente. Devuelve una URL firmada de Cloudinary con cinco minutos de vigencia:
+
+```json
+{
+  "fileName": "comprobante-CP-000001.pdf",
+  "downloadUrl": "https://res.cloudinary.com/...",
+  "expiresAt": "ISO8601"
+}
+```
+
+El comprobante también se adjunta al correo de confirmación. Las credenciales de Cloudinary nunca se exponen ni se guardan en URLs persistentes.
 
 ### POST /auth/refresh
 

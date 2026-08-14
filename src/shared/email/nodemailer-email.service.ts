@@ -27,6 +27,11 @@ export class NodemailerEmailService implements EmailService {
 			subject: message.subject,
 			text: message.text,
 			html: message.html,
+			attachments: message.attachments?.map((attachment) => ({
+				filename: attachment.filename,
+				content: Buffer.from(attachment.content),
+				contentType: attachment.contentType,
+			})),
 		});
 	}
 }

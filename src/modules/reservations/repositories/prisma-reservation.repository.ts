@@ -202,6 +202,41 @@ export class PrismaReservationRepository implements ReservationRepository {
 			data: { checkoutTokenHash: hash },
 		});
 	}
+
+	async findConfirmedByCustomerId(customerId: string) {
+		if (!isValidUuid(customerId)) return [];
+
+		return prisma.reservation.findMany({
+			where: { customerId, status: ReservationStatus.CONFIRMED },
+			select: {
+				id: true,
+				status: true,
+				startAt: true,
+				endAt: true,
+				partySize: true,
+				currency: true,
+				total: true,
+				confirmedAt: true,
+				createdAt: true,
+				branch: {
+					select: {
+						slug: true,
+						name: true,
+						address: true,
+						district: true,
+						province: true,
+						department: true,
+						restaurant: { select: { timezone: true } },
+					},
+				},
+				items: true,
+				paymentReceipt: {
+					select: { sequence: true, status: true, generatedAt: true },
+				},
+			},
+			orderBy: [{ startAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+		});
+	}
 }
 
 function buildAvailableTableWhere(

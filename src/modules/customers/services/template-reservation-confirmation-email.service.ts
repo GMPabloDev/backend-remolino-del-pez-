@@ -20,6 +20,7 @@ export class TemplateReservationConfirmationEmailService
 			subject: `Reserva confirmada en ${data.restaurantName}`,
 			text: buildTextBody(data, dateTime, currency),
 			html: buildHtmlBody(data, dateTime, currency),
+			attachments: data.attachment ? [data.attachment] : undefined,
 		};
 	}
 }
@@ -56,6 +57,9 @@ function buildTextBody(
 		"",
 		"Accede a tu cuenta mediante este enlace:",
 		data.accessUrl,
+		...(data.attachment
+			? ["", "Tu comprobante de pago está adjunto a este correo."]
+			: []),
 		"",
 		"Te esperamos.",
 	].join("\n");
@@ -110,6 +114,7 @@ function buildHtmlBody(
 				<p style="text-align:center;margin:32px 0;">
 					<a href="${escapeHtml(data.accessUrl)}" style="display:inline-block;background:#111827;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;">Acceder a mi cuenta</a>
 				</p>
+				${data.attachment ? "<p>Tu comprobante de pago está adjunto a este correo.</p>" : ""}
 				<p>Te esperamos.</p>
 			</div>
 		</div>

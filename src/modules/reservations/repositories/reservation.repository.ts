@@ -3,9 +3,11 @@ import type {
 	BranchRules,
 	BranchScheduleInterval,
 	DiningTable,
+	PaymentReceiptStatus,
 	Prisma,
 	Reservation,
 	ReservationItem,
+	ReservationStatus,
 } from "../../../generated/prisma/client";
 
 export type ReservationBranchContext = Branch & {
@@ -53,6 +55,33 @@ export interface ReservationWriteResult {
 	created: boolean;
 }
 
+export interface CustomerReservationRecord {
+	id: string;
+	status: ReservationStatus;
+	startAt: Date;
+	endAt: Date;
+	partySize: number;
+	currency: string;
+	total: Prisma.Decimal;
+	confirmedAt: Date | null;
+	createdAt: Date;
+	branch: {
+		slug: string;
+		name: string;
+		address: string;
+		district: string;
+		province: string;
+		department: string;
+		restaurant: { timezone: string };
+	};
+	items: ReservationItem[];
+	paymentReceipt: {
+		sequence: number;
+		status: PaymentReceiptStatus;
+		generatedAt: Date | null;
+	} | null;
+}
+
 export interface ReservationRepository {
 	findBranchContext(
 		restaurantSlug: string,
@@ -78,4 +107,7 @@ export interface ReservationRepository {
 		now: Date,
 	): Promise<ReservationWriteResult | null>;
 	setCheckoutTokenHash(reservationId: string, hash: string): Promise<void>;
+	findConfirmedByCustomerId(
+		customerId: string,
+	): Promise<CustomerReservationRecord[]>;
 }

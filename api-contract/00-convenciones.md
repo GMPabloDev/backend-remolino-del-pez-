@@ -79,6 +79,7 @@ Regla para el frontend: ante un `401 UNAUTHORIZED` intenta el flujo de refresh (
 | 404 | `PUBLIC_MENU_NOT_FOUND` | Restaurante o sucursal inexistente, no relacionados, o sucursal inactiva |
 | 404 | `PUBLIC_RESERVATION_NOT_FOUND` | Restaurante/sucursal no disponibles para reservas |
 | 404 | `PUBLIC_PAYMENT_NOT_FOUND` | Reserva no encontrada **o token de checkout inválido** (no distinguir ambos casos) |
+| 404 | `CUSTOMER_RESERVATION_NOT_FOUND` | Reserva o comprobante no disponible para el cliente autenticado |
 | 404 | `ROUTE_NOT_FOUND` | La URL no coincide con ninguna ruta registrada |
 | 409 | `RESTAURANT_ALREADY_EXISTS` | Ya existe un restaurante (singleton) |
 | 409 | `BRANCH_CODE_ALREADY_EXISTS` | Código de sucursal duplicado |
@@ -92,6 +93,7 @@ Regla para el frontend: ante un `401 UNAUTHORIZED` intenta el flujo de refresh (
 | 409 | `RESERVATION_EXPIRED` | La reserva venció y no admite pagos |
 | 409 | `RESERVATION_ALREADY_CONFIRMED` | La reserva ya fue confirmada |
 | 409 | `PAYMENT_STATE_CONFLICT` | Conflicto de estado en el pago |
+| 409 | `PAYMENT_RECEIPT_NOT_READY` | El comprobante todavía no está disponible |
 | 409 | `USER_EMAIL_ALREADY_EXISTS` | Email ya registrado |
 | 422 | `BRANCH_SCHEDULE_REQUIRED` | Activar sucursal sin horarios |
 | 422 | `LAST_ADMIN_REQUIRED` | No se puede degradar/desactivar al último admin activo |
@@ -99,6 +101,7 @@ Regla para el frontend: ante un `401 UNAUTHORIZED` intenta el flujo de refresh (
 | 500 | `INTERNAL_SERVER_ERROR` | Error interno (no exponer detalles al usuario) |
 | 500 | `UNKNOWN_ERROR` | Error inesperado lanzado como `HTTPException` de Hono; usa el status que tenga la excepción (mantener la regla: no depender del `message`) |
 | 503 | `PAYMENT_PROVIDER_UNAVAILABLE` | Proveedor de pagos no disponible |
+| 503 | `DOCUMENT_STORAGE_UNAVAILABLE` | Almacenamiento documental no disponible |
 
 ---
 
@@ -138,7 +141,10 @@ El flujo de clientes no usa contraseñas ni comparte sesiones con trabajadores:
 6. `POST /customer-auth/logout` revoca solo la sesión indicada y siempre responde `204`.
 7. Los access tokens de cliente nunca son válidos en rutas administrativas.
 
-El perfil devuelto contiene únicamente `fullName`, `email`, `phone` y `restaurantSlug`. La consulta de reservas queda para una spec posterior.
+El perfil devuelto contiene únicamente `fullName`, `email`, `phone` y `restaurantSlug`.
+- `GET /customer/reservations` devuelve el historial completo de reservas confirmadas del cliente autenticado.
+- `GET /customer/reservations/:reservationId/receipt/download` devuelve una URL HTTPS firmada y temporal para descargar el comprobante disponible.
+- Una reserva sin comprobante devuelve `receipt: null` en el historial.
 
 ### Checkout token después del pago
 

@@ -1,4 +1,7 @@
-import type { EmailMessage } from "../../../shared/email/email.service";
+import type {
+	EmailAttachment,
+	EmailMessage,
+} from "../../../shared/email/email.service";
 
 export interface ReservationConfirmationEmailItem {
 	name: string;
@@ -20,6 +23,7 @@ export interface ReservationConfirmationEmailData {
 	currency: string;
 	total: string;
 	accessUrl: string;
+	attachment?: EmailAttachment;
 }
 
 export interface ReservationConfirmationEmailService {
